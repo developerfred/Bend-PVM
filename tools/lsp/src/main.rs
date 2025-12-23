@@ -2,9 +2,15 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-use lsp_server::{Connection, Message, Request, RequestId, Response};
+use lsp_server::{Connection, Message, Request, RequestId, Response, Notification};
 use lsp_types::*;
+use lsp_types::notification::{DidOpenTextDocument, DidChangeTextDocument, PublishDiagnostics, Notification as _};
 use serde_json::Value;
+
+use bend_pvm::compiler::parser::{
+    parser::{Parser, ParseError},
+    ast::{Program, Definition, Statement, Expr, LocationProvider, Location as AstLocation},
+};
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // Create the connection to the language server client
@@ -13,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // Initialize the server capabilities
     let server_capabilities = serde_json::to_value(ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(
-            TextDocumentSyncKind::INCREMENTAL,
+            TextDocumentSyncKind::FULL,
         )),
         completion_provider: Some(CompletionOptions {
             resolve_provider: Some(false),
@@ -43,11 +49,12 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
                     Err(e) => eprintln!("Error handling request: {}", e),
                 }
             }
-            Message::Response(_resp) => {
-                // Do nothing for now
-            }
-            Message::Notification(_not) => {
-                // Do nothing for now
+            Message::Response(_resp) => {}
+            Message::Notification(not) => {
+                match handle_notification(&connection, not) {
+                    Ok(()) => {}
+                    Err(e) => eprintln!("Error handling notification: {}", e),
+                }
             }
         }
     }
@@ -94,18 +101,7 @@ fn handle_request(
             };
             connection.sender.send(Message::Response(resp))?;
         }
-        "textDocument/formatting" => {
-            let params = serde_json::from_value::<DocumentFormattingParams>(req.params.clone())?;
-            let edits = format_document(&params);
-            let resp = Response {
-                id: req.id,
-                result: Some(serde_json::to_value(edits)?),
-                error: None,
-            };
-            connection.sender.send(Message::Response(resp))?;
-        }
         _ => {
-            // Unknown request, respond with null
             let resp = Response {
                 id: req.id,
                 result: Some(Value::Null),
@@ -118,242 +114,225 @@ fn handle_request(
     Ok(())
 }
 
-fn get_completion_items(params: &CompletionParams) -> Vec<CompletionItem> {
-    // Get the document
-    let document_uri = params.text_document_position.text_document.uri.clone();
-    let document_path = document_uri.to_file_path().unwrap();
-    let document_text = fs::read_to_string(document_path).unwrap_or_default();
+fn handle_notification(
+    connection: &Connection,
+    not: Notification,
+) -> Result<(), Box<dyn Error + Sync + Send>> {
+    match not.method.as_str() {
+        DidOpenTextDocument::METHOD => {
+            let params = serde_json::from_value::<DidOpenTextDocumentParams>(not.params)?;
+            publish_diagnostics(connection, params.text_document.uri, &params.text_document.text)?;
+        }
+        DidChangeTextDocument::METHOD => {
+            let params = serde_json::from_value::<DidChangeTextDocumentParams>(not.params)?;
+            // We use FULL sync, so there's only one change with the full text
+            if let Some(change) = params.content_changes.first() {
+                publish_diagnostics(connection, params.text_document.uri, &change.text)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn publish_diagnostics(
+    connection: &Connection,
+    uri: Url,
+    text: &str,
+) -> Result<(), Box<dyn Error + Sync + Send>> {
+    let mut diagnostics = Vec::new();
     
-    // Basic keywords
-    let mut items = vec![
+    let mut parser = Parser::new(text);
+    if let Err(e) = parser.parse_program() {
+        let diagnostic = match e {
+            ParseError::UnexpectedToken { line, column, found, expected, .. } => {
+                Diagnostic {
+                    range: Range {
+                        start: Position { line: (line - 1) as u32, character: (column - 1) as u32 },
+                        end: Position { line: (line - 1) as u32, character: (column - 1 + found.len()) as u32 },
+                    },
+                    severity: Some(DiagnosticSeverity::ERROR),
+                    message: format!("Unexpected token '{}', expected '{}'", found, expected),
+                    ..Diagnostic::default()
+                }
+            }
+            _ => {
+                // Fallback for other errors
+                Diagnostic {
+                    range: Range {
+                        start: Position { line: 0, character: 0 },
+                        end: Position { line: 0, character: 1 },
+                    },
+                    severity: Some(DiagnosticSeverity::ERROR),
+                    message: e.to_string(),
+                    ..Diagnostic::default()
+                }
+            }
+        };
+        diagnostics.push(diagnostic);
+    }
+    
+    let params = PublishDiagnosticsParams {
+        uri,
+        diagnostics,
+        version: None,
+    };
+    
+    let not = Notification {
+        method: PublishDiagnostics::METHOD.to_string(),
+        params: serde_json::to_value(params)?,
+    };
+    
+    connection.sender.send(Message::Notification(not))?;
+    
+    Ok(())
+}
+
+fn get_completion_items(_params: &CompletionParams) -> Vec<CompletionItem> {
+    vec![
         CompletionItem {
             label: "def".to_string(),
             kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Define a function".to_string()),
-            insert_text: Some("def ${1:name}(${2:params}):\n    ${0:pass}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
             ..CompletionItem::default()
         },
-        CompletionItem {
-            label: "type".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Define a type".to_string()),
-            insert_text: Some("type ${1:Name}:\n    ${0:pass}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "object".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Define an object".to_string()),
-            insert_text: Some("object ${1:Name} { ${0:fields} }".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "return".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Return a value".to_string()),
-            insert_text: Some("return ${0:value}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "if".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("If statement".to_string()),
-            insert_text: Some("if ${1:condition}:\n    ${2:pass}\nelse:\n    ${0:pass}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "match".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Match statement".to_string()),
-            insert_text: Some("match ${1:value}:\n    case ${2:pattern}:\n        ${0:pass}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "fold".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Fold statement".to_string()),
-            insert_text: Some("fold ${1:value}:\n    case ${2:pattern}:\n        ${0:pass}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "bend".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Bend statement".to_string()),
-            insert_text: Some("bend ${1:state} = ${2:initial}:\n    when ${3:condition}:\n        ${0:pass}\n    else:\n        ${4:pass}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "with".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("With block for monadic operations".to_string()),
-            insert_text: Some("with ${1:IO}:\n    ${0:pass}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "import".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("Import statement".to_string()),
-            insert_text: Some("import ${0:module}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "from".to_string(),
-            kind: Some(CompletionItemKind::KEYWORD),
-            detail: Some("From import statement".to_string()),
-            insert_text: Some("from ${1:module} import ${0:name}".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-    ];
-    
-    // Add built-in types
-    items.extend(vec![
-        CompletionItem {
-            label: "u24".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("Unsigned 24-bit integer".to_string()),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "i24".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("Signed 24-bit integer".to_string()),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "f24".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("24-bit floating point number".to_string()),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "String".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("String type".to_string()),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "List".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("List type".to_string()),
-            insert_text: Some("List(${0:T})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "Option".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("Option type".to_string()),
-            insert_text: Some("Option(${0:T})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "Result".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("Result type".to_string()),
-            insert_text: Some("Result(${1:T}, ${0:E})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "Tree".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("Tree type".to_string()),
-            insert_text: Some("Tree(${0:T})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "Map".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("Map type".to_string()),
-            insert_text: Some("Map(${0:T})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "IO".to_string(),
-            kind: Some(CompletionItemKind::TYPE_PARAMETER),
-            detail: Some("IO type".to_string()),
-            insert_text: Some("IO(${0:T})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-    ]);
-    
-    // Add built-in functions
-    items.extend(vec![
-        CompletionItem {
-            label: "wrap".to_string(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("Wrap a value in a monad".to_string()),
-            insert_text: Some("wrap(${0:value})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-        CompletionItem {
-            label: "fork".to_string(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            detail: Some("Fork execution in a bend statement".to_string()),
-            insert_text: Some("fork(${0:state})".to_string()),
-            insert_text_format: Some(InsertTextFormat::SNIPPET),
-            ..CompletionItem::default()
-        },
-    ]);
-    
-    // TODO: Add more context-aware completions based on the document
-    
-    items
-}
-
-fn get_hover(params: &HoverParams) -> Option<Hover> {
-    let position = params.text_document_position_params.position;
-    let document_uri = params.text_document_position_params.text_document.uri.clone();
-    let document_path = document_uri.to_file_path().unwrap();
-    let document_text = fs::read_to_string(document_path).unwrap_or_default();
-    
-    // For simplicity, we'll just return a basic hover message
-    // In a real implementation, we would parse the document and identify the token at the position
-    
-    Some(Hover {
-        contents: HoverContents::Markup(MarkupContent {
-            kind: MarkupKind::Markdown,
-            value: "No detailed information available yet.".to_string(),
-        }),
-        range: None,
-    })
+        // ... (can be expanded)
+    ]
 }
 
 fn get_definition(params: &GotoDefinitionParams) -> Option<GotoDefinitionResponse> {
     let position = params.text_document_position_params.position;
     let document_uri = params.text_document_position_params.text_document.uri.clone();
-    let document_path = document_uri.to_file_path().unwrap();
-    let document_text = fs::read_to_string(document_path).unwrap_or_default();
+    let document_path = document_uri.to_file_path().ok()?;
+    let document_text = fs::read_to_string(document_path).ok()?;
     
-    // For simplicity, we'll just return None
-    // In a real implementation, we would parse the document and find the definition
+    let mut parser = Parser::new(&document_text);
+    let program = parser.parse_program().ok()?;
+    
+    let target_name = find_identifier_at_pos(&program, (position.line + 1) as usize, (position.character + 1) as usize)?;
+    let def_loc = find_definition(&program, &target_name)?;
+    
+    Some(GotoDefinitionResponse::Scalar(Location {
+        uri: document_uri,
+        range: Range {
+            start: Position {
+                line: (def_loc.line - 1) as u32,
+                character: (def_loc.column - 1) as u32,
+            },
+            end: Position {
+                line: (def_loc.line - 1) as u32,
+                character: (def_loc.column - 1 + target_name.len()) as u32,
+            },
+        },
+    }))
+}
+
+fn get_hover(params: &HoverParams) -> Option<Hover> {
+    let position = params.text_document_position_params.position;
+    let document_uri = params.text_document_position_params.text_document.uri.clone();
+    let document_path = document_uri.to_file_path().ok()?;
+    let document_text = fs::read_to_string(document_path).ok()?;
+    
+    let mut parser = Parser::new(&document_text);
+    if let Ok(program) = parser.parse_program() {
+        if let Some(name) = find_identifier_at_pos(&program, (position.line + 1) as usize, (position.character + 1) as usize) {
+             if let Some(_) = find_definition(&program, &name) {
+                 return Some(Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: format!("**Function**: `{}`", name),
+                    }),
+                    range: None,
+                });
+             }
+        }
+    }
     
     None
 }
 
-fn format_document(params: &DocumentFormattingParams) -> Option<Vec<TextEdit>> {
-    let document_uri = params.text_document.uri.clone();
-    let document_path = document_uri.to_file_path().unwrap();
-    let document_text = fs::read_to_string(document_path).unwrap_or_default();
-    
-    // For simplicity, we'll just return None
-    // In a real implementation, we would parse and format the document
-    
+fn find_identifier_at_pos(program: &Program, line: usize, col: usize) -> Option<String> {
+    for def in &program.definitions {
+        if let Some(name) = find_in_def(def, line, col) {
+            return Some(name);
+        }
+    }
+    None
+}
+
+fn find_in_def(def: &Definition, line: usize, col: usize) -> Option<String> {
+    match def {
+        Definition::FunctionDef { body, .. } => find_in_block(body, line, col),
+        _ => None,
+    }
+}
+
+fn find_in_block(block: &bend_pvm::compiler::parser::ast::Block, line: usize, col: usize) -> Option<String> {
+    for stmt in &block.statements {
+        if let Some(name) = find_in_stmt(stmt, line, col) {
+            return Some(name);
+        }
+    }
+    None
+}
+
+fn find_in_stmt(stmt: &Statement, line: usize, col: usize) -> Option<String> {
+    match stmt {
+        Statement::Expr { expr, .. } => find_in_expr(expr, line, col),
+        Statement::Assignment { value, .. } => find_in_expr(value, line, col),
+        Statement::Return { value, .. } => find_in_expr(value, line, col),
+        Statement::LocalDef { function_def, .. } => find_in_def(function_def, line, col),
+        _ => None,
+    }
+}
+
+fn find_in_expr(expr: &Expr, line: usize, col: usize) -> Option<String> {
+    let loc = expr.location();
+    match expr {
+        Expr::Variable { name, location } => {
+            if location.line == line && col >= location.column && col < location.column + name.len() {
+                return Some(name.clone());
+            }
+            None
+        },
+        Expr::FunctionCall { function, args, .. } => {
+            if let Some(name) = find_in_expr(function, line, col) {
+                return Some(name);
+            }
+            for arg in args {
+                if let Some(name) = find_in_expr(arg, line, col) {
+                    return Some(name);
+                }
+            }
+            None
+        },
+        Expr::BinaryOp { left, right, .. } => {
+             if let Some(name) = find_in_expr(left, line, col) { return Some(name); }
+             if let Some(name) = find_in_expr(right, line, col) { return Some(name); }
+             None
+        },
+        _ => None,
+    }
+}
+
+fn find_definition(program: &Program, name: &str) -> Option<AstLocation> {
+    for def in &program.definitions {
+        match def {
+            Definition::FunctionDef { name: def_name, location, .. } => {
+                if def_name == name {
+                    return Some(location.clone());
+                }
+            },
+            Definition::TypeDef { name: def_name, location, .. } => {
+                if def_name == name {
+                    return Some(location.clone());
+                }
+            },
+            Definition::ObjectDef { name: def_name, location, .. } => {
+                if def_name == name {
+                    return Some(location.clone());
+                }
+            },
+        }
+    }
     None
 }
