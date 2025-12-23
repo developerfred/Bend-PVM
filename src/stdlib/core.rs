@@ -73,6 +73,7 @@ impl StdlibModule {
     /// Create the String module
     pub fn string() -> Self {
         let mut definitions = Vec::new();
+        let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
         
         // String concatenation
         definitions.push(Definition::FunctionDef {
@@ -83,31 +84,31 @@ impl StdlibModule {
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
                 Parameter {
                     name: "b".to_string(),
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
             return_type: Some(Type::Named {
                 name: "String".to_string(),
                 params: Vec::new(),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                location: dummy_loc.clone(),
             }),
             body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
             },
             checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
         // String length
@@ -119,119 +120,20 @@ impl StdlibModule {
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
             return_type: Some(Type::U24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                location: dummy_loc.clone(),
             }),
             body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
             },
             checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // String slice
-        definitions.push(Definition::FunctionDef {
-            name: "String/slice".to_string(),
-            params: vec![
-                Parameter {
-                    name: "s".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "start".to_string(),
-                    type_annotation: Some(Type::U24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "end".to_string(),
-                    type_annotation: Some(Type::U24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "String".to_string(),
-                params: Vec::new(),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // String/to_bytes
-        definitions.push(Definition::FunctionDef {
-            name: "String/to_bytes".to_string(),
-            params: vec![
-                Parameter {
-                    name: "s".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "List".to_string(),
-                params: vec![Type::U24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // String/from_bytes
-        definitions.push(Definition::FunctionDef {
-            name: "String/from_bytes".to_string(),
-            params: vec![
-                Parameter {
-                    name: "bytes".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "List".to_string(),
-                        params: vec![Type::U24 {
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }],
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "String".to_string(),
-                params: Vec::new(),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
         StdlibModule {
@@ -243,143 +145,54 @@ impl StdlibModule {
     /// Create the Math module
     pub fn math() -> Self {
         let mut definitions = Vec::new();
-        
-        // Math/min
+        let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
+
+        // Math/PI constant
         definitions.push(Definition::FunctionDef {
-            name: "Math/min".to_string(),
-            params: vec![
-                Parameter {
-                    name: "a".to_string(),
-                    type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "b".to_string(),
-                    type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
+            name: "Math/PI".to_string(),
+            params: Vec::new(),
             return_type: Some(Type::F24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                location: dummy_loc.clone(),
             }),
             body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                statements: vec![
+                    Statement::Return {
+                        value: Expr::Literal {
+                            kind: LiteralKind::Float(std::f32::consts::PI),
+                            location: dummy_loc.clone(),
+                        },
+                        location: dummy_loc.clone(),
+                    },
+                ],
+                location: dummy_loc.clone(),
             },
             checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
-        // Math/max
+        // Math/sin
         definitions.push(Definition::FunctionDef {
-            name: "Math/max".to_string(),
-            params: vec![
-                Parameter {
-                    name: "a".to_string(),
-                    type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "b".to_string(),
-                    type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::F24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // Math/abs
-        definitions.push(Definition::FunctionDef {
-            name: "Math/abs".to_string(),
+            name: "Math/sin".to_string(),
             params: vec![
                 Parameter {
                     name: "x".to_string(),
                     type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
             return_type: Some(Type::F24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                location: dummy_loc.clone(),
             }),
             body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
             },
             checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
-        
-        // Math/sqrt
-        definitions.push(Definition::FunctionDef {
-            name: "Math/sqrt".to_string(),
-            params: vec![
-                Parameter {
-                    name: "x".to_string(),
-                    type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::F24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // Math/pow
-        definitions.push(Definition::FunctionDef {
-            name: "Math/pow".to_string(),
-            params: vec![
-                Parameter {
-                    name: "x".to_string(),
-                    type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "y".to_string(),
-                    type_annotation: Some(Type::F24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::F24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
+
         StdlibModule {
             name: "Math".to_string(),
             definitions,
@@ -389,6 +202,7 @@ impl StdlibModule {
     /// Create the IO module for blockchain operations
     pub fn io() -> Self {
         let mut definitions = Vec::new();
+        let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
         
         // IO/storage_get
         definitions.push(Definition::FunctionDef {
@@ -399,9 +213,9 @@ impl StdlibModule {
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
             return_type: Some(Type::Named {
@@ -410,174 +224,22 @@ impl StdlibModule {
                     Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     },
                     Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     },
                 ],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                location: dummy_loc.clone(),
             }),
             body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
             },
             checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // IO/storage_set
-        definitions.push(Definition::FunctionDef {
-            name: "IO/storage_set".to_string(),
-            params: vec![
-                Parameter {
-                    name: "key".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "value".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "Result".to_string(),
-                params: vec![
-                    Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                    Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                ],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // IO/emit_event
-        definitions.push(Definition::FunctionDef {
-            name: "IO/emit_event".to_string(),
-            params: vec![
-                Parameter {
-                    name: "name".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "data".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "List".to_string(),
-                        params: vec![Type::Named {
-                            name: "String".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }],
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "Result".to_string(),
-                params: vec![
-                    Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                    Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                ],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // IO/call
-        definitions.push(Definition::FunctionDef {
-            name: "IO/call".to_string(),
-            params: vec![
-                Parameter {
-                    name: "address".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "value".to_string(),
-                    type_annotation: Some(Type::U24 {
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "data".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "Result".to_string(),
-                params: vec![
-                    Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                    Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                ],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
         StdlibModule {
@@ -589,6 +251,7 @@ impl StdlibModule {
     /// Create the List module
     pub fn list() -> Self {
         let mut definitions = Vec::new();
+        let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
         
         // List type definition
         definitions.push(Definition::TypeDef {
@@ -598,7 +261,7 @@ impl StdlibModule {
                 TypeVariant {
                     name: "Nil".to_string(),
                     fields: Vec::new(),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
                 TypeVariant {
                     name: "Cons".to_string(),
@@ -608,10 +271,10 @@ impl StdlibModule {
                             type_annotation: Some(Type::Named {
                                 name: "T".to_string(),
                                 params: Vec::new(),
-                                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                                location: dummy_loc.clone(),
                             }),
                             is_recursive: false,
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
+                            location: dummy_loc.clone(),
                         },
                         Field {
                             name: "tail".to_string(),
@@ -620,99 +283,18 @@ impl StdlibModule {
                                 params: vec![Type::Named {
                                     name: "T".to_string(),
                                     params: Vec::new(),
-                                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                                    location: dummy_loc.clone(),
                                 }],
-                                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                                location: dummy_loc.clone(),
                             }),
                             is_recursive: true,
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
+                            location: dummy_loc.clone(),
                         },
                     ],
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // List/length
-        definitions.push(Definition::FunctionDef {
-            name: "List/length".to_string(),
-            params: vec![
-                Parameter {
-                    name: "list".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "List".to_string(),
-                        params: vec![Type::Named {
-                            name: "T".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }],
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::U24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // List/map
-        definitions.push(Definition::FunctionDef {
-            name: "List/map".to_string(),
-            params: vec![
-                Parameter {
-                    name: "list".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "List".to_string(),
-                        params: vec![Type::Named {
-                            name: "T".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }],
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "f".to_string(),
-                    type_annotation: Some(Type::Function {
-                        param: Box::new(Type::Named {
-                            name: "T".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }),
-                        result: Box::new(Type::Named {
-                            name: "U".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "List".to_string(),
-                params: vec![Type::Named {
-                    name: "U".to_string(),
-                    params: Vec::new(),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
         StdlibModule {
@@ -724,6 +306,7 @@ impl StdlibModule {
     /// Create the Option module
     pub fn option() -> Self {
         let mut definitions = Vec::new();
+        let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
         
         // Option type definition
         definitions.push(Definition::TypeDef {
@@ -733,7 +316,7 @@ impl StdlibModule {
                 TypeVariant {
                     name: "None".to_string(),
                     fields: Vec::new(),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
                 TypeVariant {
                     name: "Some".to_string(),
@@ -743,68 +326,16 @@ impl StdlibModule {
                             type_annotation: Some(Type::Named {
                                 name: "T".to_string(),
                                 params: Vec::new(),
-                                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                                location: dummy_loc.clone(),
                             }),
                             is_recursive: false,
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
+                            location: dummy_loc.clone(),
                         },
                     ],
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // Option/map
-        definitions.push(Definition::FunctionDef {
-            name: "Option/map".to_string(),
-            params: vec![
-                Parameter {
-                    name: "opt".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "Option".to_string(),
-                        params: vec![Type::Named {
-                            name: "T".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }],
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "f".to_string(),
-                    type_annotation: Some(Type::Function {
-                        param: Box::new(Type::Named {
-                            name: "T".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }),
-                        result: Box::new(Type::Named {
-                            name: "U".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "Option".to_string(),
-                params: vec![Type::Named {
-                    name: "U".to_string(),
-                    params: Vec::new(),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
         StdlibModule {
@@ -816,6 +347,7 @@ impl StdlibModule {
     /// Create the Result module
     pub fn result() -> Self {
         let mut definitions = Vec::new();
+        let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
         
         // Result type definition
         definitions.push(Definition::TypeDef {
@@ -830,13 +362,13 @@ impl StdlibModule {
                             type_annotation: Some(Type::Named {
                                 name: "T".to_string(),
                                 params: Vec::new(),
-                                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                                location: dummy_loc.clone(),
                             }),
                             is_recursive: false,
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
+                            location: dummy_loc.clone(),
                         },
                     ],
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
                 TypeVariant {
                     name: "Err".to_string(),
@@ -846,82 +378,16 @@ impl StdlibModule {
                             type_annotation: Some(Type::Named {
                                 name: "E".to_string(),
                                 params: Vec::new(),
-                                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                                location: dummy_loc.clone(),
                             }),
                             is_recursive: false,
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
+                            location: dummy_loc.clone(),
                         },
                     ],
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // Result/map
-        definitions.push(Definition::FunctionDef {
-            name: "Result/map".to_string(),
-            params: vec![
-                Parameter {
-                    name: "result".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "Result".to_string(),
-                        params: vec![
-                            Type::Named {
-                                name: "T".to_string(),
-                                params: Vec::new(),
-                                location: Location { line: 0, column: 0, start: 0, end: 0 },
-                            },
-                            Type::Named {
-                                name: "E".to_string(),
-                                params: Vec::new(),
-                                location: Location { line: 0, column: 0, start: 0, end: 0 },
-                            },
-                        ],
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "f".to_string(),
-                    type_annotation: Some(Type::Function {
-                        param: Box::new(Type::Named {
-                            name: "T".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }),
-                        result: Box::new(Type::Named {
-                            name: "U".to_string(),
-                            params: Vec::new(),
-                            location: Location { line: 0, column: 0, start: 0, end: 0 },
-                        }),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "Result".to_string(),
-                params: vec![
-                    Type::Named {
-                        name: "U".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                    Type::Named {
-                        name: "E".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    },
-                ],
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
         StdlibModule {
@@ -933,6 +399,7 @@ impl StdlibModule {
     /// Create the Crypto module
     pub fn crypto() -> Self {
         let mut definitions = Vec::new();
+        let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
         
         // Crypto/keccak256
         definitions.push(Definition::FunctionDef {
@@ -943,92 +410,22 @@ impl StdlibModule {
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
             return_type: Some(Type::Named {
                 name: "String".to_string(),
                 params: Vec::new(),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                location: dummy_loc.clone(),
             }),
             body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
             },
             checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // Crypto/sha256
-        definitions.push(Definition::FunctionDef {
-            name: "Crypto/sha256".to_string(),
-            params: vec![
-                Parameter {
-                    name: "data".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::Named {
-                name: "String".to_string(),
-                params: Vec::new(),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        });
-        
-        // Crypto/verify_signature
-        definitions.push(Definition::FunctionDef {
-            name: "Crypto/verify_signature".to_string(),
-            params: vec![
-                Parameter {
-                    name: "message".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "signature".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-                Parameter {
-                    name: "public_key".to_string(),
-                    type_annotation: Some(Type::Named {
-                        name: "String".to_string(),
-                        params: Vec::new(),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
-                    }),
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                },
-            ],
-            return_type: Some(Type::U24 {
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            }),
-            body: Block {
-                statements: Vec::new(), // Built-in, no body needed
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            checked: Some(true),
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         });
         
         StdlibModule {
