@@ -40,7 +40,7 @@ pub struct ImportName {
 }
 
 /// Represents a top-level definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Definition {
     FunctionDef {
         name: String,
@@ -65,15 +65,15 @@ pub enum Definition {
 }
 
 /// Represents a parameter in a function definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
     pub name: String,
-    pub type_annotation: Option<Type>,
+    pub ty: Type,
     pub location: Location,
 }
 
 /// Represents a function or constructor parameter field
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     pub name: String,
     pub type_annotation: Option<Type>,
@@ -82,7 +82,7 @@ pub struct Field {
 }
 
 /// Represents a variant in a type definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TypeVariant {
     pub name: String,
     pub fields: Vec<Field>,
@@ -124,17 +124,20 @@ pub enum Type {
     F24 {
         location: Location,
     },
+    Unknown {
+        location: Location,
+    },
 }
 
 /// Represents a block of statements
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub statements: Vec<Statement>,
     pub location: Location,
 }
 
 /// Represents a statement in the Bend-PVM language
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Assignment {
         pattern: Pattern,
@@ -219,7 +222,7 @@ pub enum InPlaceOperator {
 }
 
 /// Represents a switch case
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SwitchCase {
     pub value: Option<u32>, // None means default case (_)
     pub body: Block,
@@ -227,7 +230,7 @@ pub struct SwitchCase {
 }
 
 /// Represents a match case
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MatchCase {
     pub pattern: Pattern,
     pub body: Block,
@@ -235,7 +238,7 @@ pub struct MatchCase {
 }
 
 /// Represents a pattern in pattern matching
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Variable {
         name: String,
@@ -260,7 +263,7 @@ pub enum Pattern {
 }
 
 /// Represents an expression in the Bend-PVM language
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Variable {
         name: String,
@@ -334,7 +337,7 @@ pub enum Expr {
 }
 
 /// Represents a literal value
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LiteralKind {
     Uint(u32),    // For u24
     Int(i32),     // For i24
@@ -365,3 +368,82 @@ pub enum BinaryOperator {
     BitShiftLeft,
     BitShiftRight,
 }
+
+/// Helper trait to get the location of an AST node
+pub trait LocationProvider {
+    fn location(&self) -> &Location;
+}
+
+impl LocationProvider for Definition {
+    fn location(&self) -> &Location {
+        match self {
+            Definition::FunctionDef { location, .. } => location,
+            Definition::TypeDef { location, .. } => location,
+            Definition::ObjectDef { location, .. } => location,
+        }
+    }
+}
+
+impl LocationProvider for Expr {
+    fn location(&self) -> &Location {
+        match self {
+            Expr::Variable { location, .. } => location,
+            Expr::Literal { location, .. } => location,
+            Expr::Tuple { location, .. } => location,
+            Expr::List { location, .. } => location,
+            Expr::Constructor { location, .. } => location,
+            Expr::FunctionCall { location, .. } => location,
+            Expr::Lambda { location, .. } => location,
+            Expr::UnsccopedLambda { location, .. } => location,
+            Expr::BinaryOp { location, .. } => location,
+            Expr::Superposition { location, .. } => location,
+            Expr::MapAccess { location, .. } => location,
+            Expr::TreeLeaf { location, .. } => location,
+            Expr::TreeNode { location, .. } => location,
+            Expr::Block { location, .. } => location,
+            Expr::Eraser { location } => location,
+        }
+    }
+}
+
+impl LocationProvider for Statement {
+    fn location(&self) -> &Location {
+        match self {
+            Statement::Assignment { location, .. } => location,
+            Statement::Use { location, .. } => location,
+            Statement::InPlaceOp { location, .. } => location,
+            Statement::Return { location, .. } => location,
+            Statement::If { location, .. } => location,
+            Statement::Switch { location, .. } => location,
+            Statement::Match { location, .. } => location,
+            Statement::Fold { location, .. } => location,
+            Statement::Bend { location, .. } => location,
+            Statement::Open { location, .. } => location,
+            Statement::With { location, .. } => location,
+             Statement::LocalDef { location, .. } => location,
+             Statement::Expr { location, .. } => location,
+        }
+    }
+}
+
+// Implement LocationProvider for Box<T> where T implements LocationProvider
+impl<T: LocationProvider> LocationProvider for Box<T> {
+    fn location(&self) -> &Location {
+        self.as_ref().location()
+    }
+}
+
+// Implement LocationProvider for &T where T implements LocationProvider
+impl<T: LocationProvider> LocationProvider for &T {
+    fn location(&self) -> &Location {
+        (*self).location()
+    }
+}
+
+// Implement LocationProvider for std::rc::Rc<T> where T implements LocationProvider
+impl<T: LocationProvider> LocationProvider for std::rc::Rc<T> {
+    fn location(&self) -> &Location {
+        self.as_ref().location()
+    }
+}
+

@@ -256,11 +256,7 @@ impl TypeChecker {
                     // Add parameters to the scope
                     let mut param_types = Vec::new();
                     for param in params {
-                        let param_type = if let Some(type_annotation) = &param.type_annotation {
-                            checker.ast_type_to_type_info(type_annotation)?
-                        } else {
-                            TypeInfo::Any
-                        };
+                        let param_type = checker.ast_type_to_type_info(&param.ty)?;
                         
                         checker.symbols.insert(param.name.clone(), Symbol::Variable(param_type.clone()));
                         param_types.push(param_type);
@@ -427,6 +423,7 @@ impl TypeChecker {
             Type::U24 { .. } => Ok(TypeInfo::U24),
             Type::I24 { .. } => Ok(TypeInfo::I24),
             Type::F24 { .. } => Ok(TypeInfo::F24),
+            Type::Unknown { .. } => Ok(TypeInfo::Unknown),
         }
     }
     

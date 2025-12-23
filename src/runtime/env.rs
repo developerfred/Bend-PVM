@@ -359,7 +359,7 @@ impl Environment {
         if self.context.input.starts_with(&[0xDE, 0xAD, 0xBE, 0xEF]) {
             // Simulate a revert
             Ok(ExecutionResult::Revert {
-                data: vec![0xFA, 0x1L, 0xED],
+                data: vec![0xFA, 0x1D, 0xED],
                 gas_used: self.context.gas_limit / 4,
                 proof_size_used: self.context.proof_size_limit / 4,
                 storage_deposit_used: self.context.storage_deposit_limit / 4,

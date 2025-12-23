@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 
 use crate::compiler::codegen::metadata::{ContractMetadata, FunctionMetadata};
@@ -228,7 +227,7 @@ fn function_to_method_abi(name: &str, function: &FunctionMetadata) -> MethodABI 
     let selector = hex::encode(function.selector);
     
     MethodABI {
-        name: name.clone(),
+        name: name.to_string(),
         selector: format!("0x{}", selector),
         type_: MethodType::Function,
         inputs,
