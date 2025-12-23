@@ -127,8 +127,9 @@ impl OptimizationManager {
             },
             OptimizationLevel::Aggressive => {
                 // Enable all passes
-                for pass in &self.passes {
-                    self.enable_pass(pass.name());
+                let pass_names: Vec<_> = self.passes.iter().map(|p| p.name()).collect();
+                for name in pass_names {
+                    self.enable_pass(name);
                 }
             },
         }

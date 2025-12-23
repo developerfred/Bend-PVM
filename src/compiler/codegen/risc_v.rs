@@ -585,7 +585,8 @@ impl RiscVCodegen {
             Expr::FunctionCall { function, args, .. } => {
                 // For simplicity, only handle direct function calls
                 if let Expr::Variable { name, .. } = &**function {
-                    if let Some(function_label) = self.function_labels.get(name) {
+                    let function_label = self.function_labels.get(name).cloned();
+                    if let Some(function_label) = function_label {
                         // Load arguments into argument registers
                         let arg_registers = Register::arg_registers();
                         for (i, arg) in args.iter().enumerate() {

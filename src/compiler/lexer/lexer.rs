@@ -4,7 +4,7 @@ use super::token::Token;
 
 /// Define tokens using the Logos derive macro for efficient lexing
 #[derive(Logos, Debug, PartialEq, Clone)]
-#[logos(skip r"[ \t\n\f]+", error = LexError)]
+#[logos(skip r"[ \t\n\f]+")]
 enum LogosToken {
     #[regex("[A-Za-z][A-Za-z0-9_./]*")]
     Identifier,
@@ -140,12 +140,9 @@ enum LogosToken {
     // Comments
     #[regex("#\\{[^}]*\\}#", logos::skip)]
     MultiLineComment,
-    
+
     #[regex("#[^\\n]*", logos::skip)]
     SingleLineComment,
-    
-    #[error]
-    LexError,
 }
 
 /// Represents a token with its position in the source code
@@ -209,11 +206,27 @@ impl<'a> BendLexer<'a> {
     
     /// Get the next token from the source
     pub fn next_token(&mut self) -> TokenWithPosition {
-        let start_pos = self.logos_lexer.span().start;
+        let mut start_pos = self.logos_lexer.span().end;
+        
+        let token_result = self.logos_lexer.next();
+        
+        // The logos lexer skip patterns don't update our line/column count.
+        // We need to check the text between the end of the last token and the start of this one.
+        let skipped_text = &self.source[start_pos..self.logos_lexer.span().start];
+        for c in skipped_text.chars() {
+            if c == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+        }
+        
+        let actual_start_pos = self.logos_lexer.span().start;
         let start_column = self.column;
         let start_line = self.line;
         
-        let token = match self.logos_lexer.next() {
+        let token = match token_result {
             Some(Ok(logos_token)) => {
                 let span = self.logos_lexer.span();
                 let text = &self.source[span.clone()];
@@ -308,7 +321,6 @@ impl<'a> BendLexer<'a> {
                     LogosToken::CaretEqual => Token::CaretEqual,
                     LogosToken::AmpersandEqual => Token::AmpersandEqual,
                     LogosToken::PipeEqual => Token::PipeEqual,
-                    LogosToken::LexError => Token::Error(format!("Invalid token: {}", text)),
                     _ => Token::Error(format!("Unexpected token: {}", text)),
                 }
             }
@@ -320,8 +332,8 @@ impl<'a> BendLexer<'a> {
             None => Token::EOF,
         };
         
-        // Update line and column count for next token
-        for c in self.source[start_pos..self.logos_lexer.span().start].chars() {
+        // Update line and column count for next token (the actual token text)
+        for c in self.source[self.logos_lexer.span().clone()].chars() {
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
@@ -332,10 +344,275 @@ impl<'a> BendLexer<'a> {
         
         TokenWithPosition {
             token,
-            start: start_pos,
+            start: actual_start_pos,
             end: self.logos_lexer.span().end,
             line: start_line,
             column: start_column,
+        }
+    }
+
+    /// Helper method to collect all tokens from source
+    #[cfg(test)]
+    pub fn collect_all_tokens(&mut self) -> Vec<TokenWithPosition> {
+        let mut tokens = Vec::new();
+        loop {
+            let token = self.next_token();
+            tokens.push(token.clone());
+            if let Token::EOF = token.token {
+                break;
+            }
+        }
+        tokens
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::token::Token;
+
+    #[test]
+    fn test_keywords() {
+        let keywords = vec![
+            ("def", Token::Def),
+            ("type", Token::Type),
+            ("return", Token::Return),
+            ("if", Token::If),
+            ("else", Token::Else),
+            ("match", Token::Match),
+            ("case", Token::Case),
+            ("with", Token::With),
+            ("use", Token::Use),
+        ];
+
+        for (text, expected) in keywords {
+            let mut lexer = BendLexer::new(text);
+            let token = lexer.next_token();
+            assert_eq!(token.token, expected, "Failed for keyword: {}", text);
+        }
+    }
+
+    #[test]
+    fn test_identifiers() {
+        let identifiers = vec![
+            "variable",
+            "my_function",
+            "CamelCase",
+            "snake_case",
+            "x",
+            "a123",
+            "test_123",
+        ];
+
+        for ident in identifiers {
+            let mut lexer = BendLexer::new(ident);
+            let token = lexer.next_token();
+            assert_eq!(token.token, Token::Identifier(ident.to_string()));
+        }
+    }
+
+    #[test]
+    fn test_unsigned_integers() {
+        let test_cases = vec![
+            ("0", Token::UintLiteral(0)),
+            ("42", Token::UintLiteral(42)),
+            ("123456", Token::UintLiteral(123456)),
+            ("16777215", Token::UintLiteral(16777215)), // 2^24 - 1 (u24 max)
+        ];
+
+        for (text, expected) in test_cases {
+            let mut lexer = BendLexer::new(text);
+            let token = lexer.next_token();
+            assert_eq!(token.token, expected, "Failed for: {}", text);
+        }
+    }
+
+    #[test]
+    fn test_unsigned_integer_overflow() {
+        let mut lexer = BendLexer::new("16777216"); // 2^24 (too big for u24)
+        let token = lexer.next_token();
+        match token.token {
+            Token::Error(msg) => assert!(msg.contains("exceeds u24 maximum")),
+            _ => panic!("Expected error for overflow"),
+        }
+    }
+
+    #[test]
+    fn test_signed_integers() {
+        let test_cases = vec![
+            ("+42", Token::IntLiteral(42)),
+            ("-123", Token::IntLiteral(-123)),
+            ("+0", Token::IntLiteral(0)),
+            ("-8388608", Token::IntLiteral(-8388608)), // -2^23 (i24 min)
+            ("+8388607", Token::IntLiteral(8388607)),  // 2^23 - 1 (i24 max)
+        ];
+
+        for (text, expected) in test_cases {
+            let mut lexer = BendLexer::new(text);
+            let token = lexer.next_token();
+            assert_eq!(token.token, expected, "Failed for: {}", text);
+        }
+    }
+
+    #[test]
+    fn test_signed_integer_overflow() {
+        let test_cases = vec!["-8388609", "+8388608"]; // Outside i24 range
+
+        for text in test_cases {
+            let mut lexer = BendLexer::new(text);
+            let token = lexer.next_token();
+            match token.token {
+                Token::Error(msg) => assert!(msg.contains("exceeds i24 range")),
+                _ => panic!("Expected error for overflow: {}", text),
+            }
+        }
+    }
+
+    #[test]
+    fn test_float_literals() {
+        let test_cases = vec![
+            ("3.14", Token::FloatLiteral(3.14)),
+            ("-2.5", Token::FloatLiteral(-2.5)),
+            ("+0.0", Token::FloatLiteral(0.0)),
+            ("123.456", Token::FloatLiteral(123.456)),
+        ];
+
+        for (text, expected) in test_cases {
+            let mut lexer = BendLexer::new(text);
+            let token = lexer.next_token();
+            match (&token.token, &expected) {
+                (Token::FloatLiteral(actual), Token::FloatLiteral(expected_val)) => {
+                    assert!((actual - expected_val).abs() < 0.001, "Failed for: {}", text);
+                }
+                _ => panic!("Expected FloatLiteral for: {}", text),
+            }
+        }
+    }
+
+    #[test]
+    fn test_string_literals() {
+        let test_cases = vec![
+            ("\"hello\"", Token::StringLiteral("hello".to_string())),
+            ("\"world\"", Token::StringLiteral("world".to_string())),
+            ("\"\"", Token::StringLiteral("".to_string())),
+            ("\"hello world\"", Token::StringLiteral("hello world".to_string())),
+        ];
+
+        for (text, expected) in test_cases {
+            let mut lexer = BendLexer::new(text);
+            let token = lexer.next_token();
+            assert_eq!(token.token, expected, "Failed for: {}", text);
+        }
+    }
+
+    #[test]
+    fn test_operators_and_symbols() {
+        let test_cases = vec![
+            ("+", Token::Plus),
+            ("-", Token::Minus),
+            ("*", Token::Star),
+            ("/", Token::Slash),
+            ("=", Token::Equal),
+            ("==", Token::EqualEqual),
+            ("!=", Token::NotEqual),
+            ("<", Token::LessThan),
+            (">", Token::GreaterThan),
+            ("<=", Token::LessEqual),
+            (">=", Token::GreaterEqual),
+            ("->", Token::Arrow),
+            ("=>", Token::FatArrow),
+            ("(", Token::LParen),
+            (")", Token::RParen),
+            ("{", Token::LBrace),
+            ("}", Token::RBrace),
+            ("[", Token::LBracket),
+            ("]", Token::RBracket),
+            (":", Token::Colon),
+            (";", Token::Semicolon),
+            (",", Token::Comma),
+            (".", Token::Dot),
+        ];
+
+        for (text, expected) in test_cases {
+            let mut lexer = BendLexer::new(text);
+            let token = lexer.next_token();
+            assert_eq!(token.token, expected, "Failed for operator: {}", text);
+        }
+    }
+
+    #[test]
+    fn test_comments() {
+        let mut lexer = BendLexer::new("# This is a comment\ndef test");
+        let tokens = lexer.collect_all_tokens();
+
+        // Should skip comment and return def token
+        assert_eq!(tokens[0].token, Token::Def);
+        assert_eq!(tokens[1].token, Token::Identifier("test".to_string()));
+    }
+
+    #[test]
+    fn test_multiline_comments() {
+        let mut lexer = BendLexer::new("#{\nThis is a\nmultiline comment\n}#\ndef test");
+        let tokens = lexer.collect_all_tokens();
+
+        // Should skip multiline comment and return def token
+        assert_eq!(tokens[0].token, Token::Def);
+        assert_eq!(tokens[1].token, Token::Identifier("test".to_string()));
+    }
+
+    #[test]
+    fn test_position_tracking() {
+        let mut lexer = BendLexer::new("def\ntest");
+        let token1 = lexer.next_token();
+        let token2 = lexer.next_token();
+
+        assert_eq!(token1.line, 1);
+        assert_eq!(token1.column, 1);
+        assert_eq!(token2.line, 2);
+        assert_eq!(token2.column, 1);
+    }
+
+    #[test]
+    fn test_function_definition() {
+        let source = "def add(a: u24, b: u24) -> u24:\n    return a + b";
+        let mut lexer = BendLexer::new(source);
+        let tokens = lexer.collect_all_tokens();
+
+        let expected_tokens = vec![
+            Token::Def,
+            Token::Identifier("add".to_string()),
+            Token::LParen,
+            Token::Identifier("a".to_string()),
+            Token::Colon,
+            Token::Identifier("u24".to_string()),
+            Token::Comma,
+            Token::Identifier("b".to_string()),
+            Token::Colon,
+            Token::Identifier("u24".to_string()),
+            Token::RParen,
+            Token::Arrow,
+            Token::Identifier("u24".to_string()),
+            Token::Colon,
+            Token::Return,
+            Token::Identifier("a".to_string()),
+            Token::Plus,
+            Token::Identifier("b".to_string()),
+            Token::EOF,
+        ];
+
+        for (i, expected) in expected_tokens.iter().enumerate() {
+            assert_eq!(&tokens[i].token, expected, "Token {} mismatch", i);
+        }
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let mut lexer = BendLexer::new("@invalid");
+        let token = lexer.next_token();
+
+        match token.token {
+            Token::Error(_) => (), // Expected error
+            _ => panic!("Expected error token for invalid input"),
         }
     }
 }

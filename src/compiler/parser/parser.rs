@@ -366,14 +366,23 @@ impl<'a> Parser<'a> {
                     type_annotation = Some(self.parse_type()?);
                 }
                 
-                params.push(Parameter {
-                    name: param_name,
-                    type_annotation,
+                let param_type = type_annotation.unwrap_or(Type::Unknown { 
                     location: Location {
                         line: param_name_token.line,
                         column: param_name_token.column,
                         start: param_name_token.start,
-                        end: self.current_token.end,
+                        end: param_name_token.end,
+                    }, 
+                });
+                
+                params.push(Parameter {
+                    name: param_name,
+                    ty: param_type,
+                    location: Location {
+                        line: param_name_token.line,
+                        column: param_name_token.column,
+                        start: param_name_token.start,
+                        end: param_name_token.end,
                     },
                 });
                 
@@ -401,6 +410,7 @@ impl<'a> Parser<'a> {
         // Parse function body
         self.expect(Token::Colon)?;
         let body = self.parse_block()?;
+        let end = body.location.end;
         
         Ok(Definition::FunctionDef {
             name,
@@ -412,7 +422,7 @@ impl<'a> Parser<'a> {
                 line: start_line,
                 column: start_column,
                 start,
-                end: body.location.end,
+                end,
             },
         })
     }
@@ -886,9 +896,10 @@ impl<'a> Parser<'a> {
             Token::Use => self.parse_use_statement(),
             Token::Def => {
                 let def = self.parse_function_def()?;
+                let location = def.location().clone();
                 Ok(Statement::LocalDef {
                     function_def: Box::new(def),
-                    location: def.location().clone(),
+                    location,
                 })
             },
             _ => {
@@ -1271,15 +1282,17 @@ impl<'a> Parser<'a> {
                         _ => unreachable!(),
                     };
                     
+                    let param_loc = Location {
+                        line: param_token.line,
+                        column: param_token.column,
+                        start: param_token.start,
+                        end: param_token.end,
+                    };
+                    
                     params.push(Parameter {
                         name: param_name,
-                        type_annotation: None,
-                        location: Location {
-                            line: param_token.line,
-                            column: param_token.column,
-                            start: param_token.start,
-                            end: param_token.end,
-                        },
+                        ty: Type::Unknown { location: param_loc.clone() },
+                        location: param_loc,
                     });
                     
                     // Parse additional parameters
@@ -1292,15 +1305,17 @@ impl<'a> Parser<'a> {
                             _ => unreachable!(),
                         };
                         
+                        let param_loc = Location {
+                            line: param_token.line,
+                            column: param_token.column,
+                            start: param_token.start,
+                            end: param_token.end,
+                        };
+                        
                         params.push(Parameter {
                             name: param_name,
-                            type_annotation: None,
-                            location: Location {
-                                line: param_token.line,
-                                column: param_token.column,
-                                start: param_token.start,
-                                end: param_token.end,
-                            },
+                            ty: Type::Unknown { location: param_loc.clone() },
+                            location: param_loc,
                         });
                     }
                 }
@@ -1430,42 +1445,5 @@ impl<'a> Parser<'a> {
     fn parse_use_statement(&mut self) -> Result<Statement, ParseError> {
         // Not implementing all statement types for brevity
         Err(ParseError::Generic("Not implemented: parse_use_statement".to_string()))
-    }
-}
-
-/// Helper trait to get the location of an AST node
-trait LocationProvider {
-    fn location(&self) -> &Location;
-}
-
-impl LocationProvider for Definition {
-    fn location(&self) -> &Location {
-        match self {
-            Definition::FunctionDef { location, .. } => location,
-            Definition::TypeDef { location, .. } => location,
-            Definition::ObjectDef { location, .. } => location,
-        }
-    }
-}
-
-impl LocationProvider for Expr {
-    fn location(&self) -> &Location {
-        match self {
-            Expr::Variable { location, .. } => location,
-            Expr::Literal { location, .. } => location,
-            Expr::Tuple { location, .. } => location,
-            Expr::List { location, .. } => location,
-            Expr::Constructor { location, .. } => location,
-            Expr::FunctionCall { location, .. } => location,
-            Expr::Lambda { location, .. } => location,
-            Expr::UnsccopedLambda { location, .. } => location,
-            Expr::BinaryOp { location, .. } => location,
-            Expr::Superposition { location, .. } => location,
-            Expr::MapAccess { location, .. } => location,
-            Expr::TreeLeaf { location, .. } => location,
-            Expr::TreeNode { location, .. } => location,
-            Expr::Block { location, .. } => location,
-            Expr::Eraser { location } => location,
-        }
     }
 }
