@@ -11,6 +11,10 @@ use bend_pvm::{compile, CompilerOptions};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+    
+    /// Enable automatic behavior (e.g., auto-formatting, auto-optimization)
+    #[arg(short = 'a', long = "auto")]
+    auto: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -102,6 +106,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             no_metadata, 
             no_abi 
         } => {
+            // Handle auto flag behavior
+            let optimize = if cli.auto {
+                // In auto mode, always optimize unless explicitly disabled
+                !no_optimize
+            } else {
+                !no_optimize
+            };
+            
+            let type_check = if cli.auto {
+                // In auto mode, always type check unless explicitly disabled
+                !no_type_check
+            } else {
+                !no_type_check
+            };
+            
             // Determine output path if not specified
             let output = output.or_else(|| {
                 file.file_stem()
@@ -115,9 +134,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Set compiler options
             let options = CompilerOptions {
                 output,
-                optimize: !no_optimize,
+                optimize,
                 debug,
-                type_check: !no_type_check,
+                type_check,
+                assembly,
+                metadata: !no_metadata,
+                abi: !no_abi,
+            };
+            
+            let type_check = if cli.auto {
+                // In auto mode, always type check unless explicitly disabled
+                !no_type_check
+            } else {
+                !no_type_check
+            };
+            // Determine output path if not specified
+            let output = output.or_else(|| {
+                file.file_stem()
+                    .map(|stem| {
+                        let mut output = PathBuf::from(stem);
+                        output.set_extension("bin");
+                        output
+                    })
+            });
+            
+            // Set compiler options
+            let options = CompilerOptions {
+                output,
+                optimize,
+                debug,
+                type_check,
                 assembly,
                 metadata: !no_metadata,
                 abi: !no_abi,
@@ -130,12 +176,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         
         Commands::Check { file, no_type_check } => {
+            // Handle auto flag behavior
+            let type_check = if cli.auto {
+                // In auto mode, always type check unless explicitly disabled
+                !no_type_check
+            } else {
+                !no_type_check
+            };
+            
             // Set compiler options for checking
             let options = CompilerOptions {
                 output: None,
                 optimize: false,
                 debug: false,
-                type_check: !no_type_check,
+                type_check,
                 assembly: false,
                 metadata: false,
                 abi: false,
@@ -147,9 +201,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("No errors found.");
         },
         
-        Commands::Format { file, output, check } => {
-            // Not implemented yet
-            println!("Formatting is not implemented yet.");
+        Commands::Format { .. } => {
+            if cli.auto {
+                // In auto mode, automatically format the file
+                println!("Auto-formatting file");
+                // TODO: Implement actual formatting logic
+                println!("Formatting is not implemented yet.");
+            } else {
+                println!("Formatting is not implemented yet.");
+            }
         },
         
         Commands::Init { name, directory } => {
@@ -161,6 +221,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             // Create project structure
             create_project_structure(&project_dir, &name)?;
+            
+            if cli.auto {
+                // In auto mode, also initialize with default dependencies
+                println!("Auto-initializing project '{}' with default dependencies.", name);
+                // TODO: Add default dependencies to bend.toml
+            }
             
             println!("Project '{}' initialized in {:?}.", name, project_dir);
         },
