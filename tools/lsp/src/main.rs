@@ -2,14 +2,16 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-use lsp_server::{Connection, Message, Request, RequestId, Response, Notification};
+use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
+use lsp_types::notification::{
+    DidChangeTextDocument, DidOpenTextDocument, Notification as _, PublishDiagnostics,
+};
 use lsp_types::*;
-use lsp_types::notification::{DidOpenTextDocument, DidChangeTextDocument, PublishDiagnostics, Notification as _};
 use serde_json::Value;
 
 use bend_pvm::compiler::parser::{
-    parser::{Parser, ParseError},
-    ast::{Program, Definition, Statement, Expr, LocationProvider, Location as AstLocation},
+    ast::{Definition, Expr, Location as AstLocation, LocationProvider, Program, Statement},
+    parser::{ParseError, Parser},
 };
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -18,19 +20,26 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
 
     // Initialize the server capabilities
     let server_capabilities = serde_json::to_value(ServerCapabilities {
-        text_document_sync: Some(TextDocumentSyncCapability::Kind(
-            TextDocumentSyncKind::FULL,
-        )),
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         completion_provider: Some(CompletionOptions {
             resolve_provider: Some(false),
             trigger_characters: Some(vec![".".to_string()]),
             ..CompletionOptions::default()
         }),
         hover_provider: Some(HoverProviderCapability::Simple(true)),
+        signature_help_provider: Some(SignatureHelpOptions {
+            trigger_characters: Some(vec!["(".to_string(), ",".to_string()]),
+            retrigger_characters: Some(vec![",".to_string()]),
+            ..SignatureHelpOptions::default()
+        }),
         definition_provider: Some(OneOf::Left(true)),
+        references_provider: Some(OneOf::Left(true)),
+        document_symbol_provider: Some(OneOf::Left(true)),
+        workspace_symbol_provider: Some(OneOf::Left(true)),
         document_formatting_provider: Some(OneOf::Left(true)),
         ..ServerCapabilities::default()
-    }).unwrap();
+    })
+    .unwrap();
 
     // Initialize the server
     let params = connection.initialize(server_capabilities)?;
@@ -43,25 +52,23 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
                 if connection.handle_shutdown(&req)? {
                     break;
                 }
-                
+
                 match handle_request(&connection, req) {
                     Ok(()) => {}
                     Err(e) => eprintln!("Error handling request: {}", e),
                 }
             }
             Message::Response(_resp) => {}
-            Message::Notification(not) => {
-                match handle_notification(&connection, not) {
-                    Ok(()) => {}
-                    Err(e) => eprintln!("Error handling notification: {}", e),
-                }
-            }
+            Message::Notification(not) => match handle_notification(&connection, not) {
+                Ok(()) => {}
+                Err(e) => eprintln!("Error handling notification: {}", e),
+            },
         }
     }
 
     // Wait for the IO threads to finish
     io_threads.join()?;
-    
+
     Ok(())
 }
 
@@ -101,6 +108,36 @@ fn handle_request(
             };
             connection.sender.send(Message::Response(resp))?;
         }
+        "textDocument/references" => {
+            let params = serde_json::from_value::<ReferenceParams>(req.params.clone())?;
+            let references = find_references(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(references)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
+        "textDocument/documentSymbol" => {
+            let params = serde_json::from_value::<DocumentSymbolParams>(req.params.clone())?;
+            let symbols = get_document_symbols(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(symbols)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
+        "workspace/symbol" => {
+            let params = serde_json::from_value::<WorkspaceSymbolParams>(req.params.clone())?;
+            let symbols = get_workspace_symbols(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(symbols)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
         _ => {
             let resp = Response {
                 id: req.id,
@@ -110,7 +147,7 @@ fn handle_request(
             connection.sender.send(Message::Response(resp))?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -121,7 +158,11 @@ fn handle_notification(
     match not.method.as_str() {
         DidOpenTextDocument::METHOD => {
             let params = serde_json::from_value::<DidOpenTextDocumentParams>(not.params)?;
-            publish_diagnostics(connection, params.text_document.uri, &params.text_document.text)?;
+            publish_diagnostics(
+                connection,
+                params.text_document.uri,
+                &params.text_document.text,
+            )?;
         }
         DidChangeTextDocument::METHOD => {
             let params = serde_json::from_value::<DidChangeTextDocumentParams>(not.params)?;
@@ -141,27 +182,43 @@ fn publish_diagnostics(
     text: &str,
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     let mut diagnostics = Vec::new();
-    
+
     let mut parser = Parser::new(text);
     if let Err(e) = parser.parse_program() {
         let diagnostic = match e {
-            ParseError::UnexpectedToken { line, column, found, expected, .. } => {
-                Diagnostic {
-                    range: Range {
-                        start: Position { line: (line - 1) as u32, character: (column - 1) as u32 },
-                        end: Position { line: (line - 1) as u32, character: (column - 1 + found.len()) as u32 },
+            ParseError::UnexpectedToken {
+                line,
+                column,
+                found,
+                expected,
+                ..
+            } => Diagnostic {
+                range: Range {
+                    start: Position {
+                        line: (line - 1) as u32,
+                        character: (column - 1) as u32,
                     },
-                    severity: Some(DiagnosticSeverity::ERROR),
-                    message: format!("Unexpected token '{}', expected '{}'", found, expected),
-                    ..Diagnostic::default()
-                }
-            }
+                    end: Position {
+                        line: (line - 1) as u32,
+                        character: (column - 1 + found.len()) as u32,
+                    },
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                message: format!("Unexpected token '{}', expected '{}'", found, expected),
+                ..Diagnostic::default()
+            },
             _ => {
                 // Fallback for other errors
                 Diagnostic {
                     range: Range {
-                        start: Position { line: 0, character: 0 },
-                        end: Position { line: 0, character: 1 },
+                        start: Position {
+                            line: 0,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 0,
+                            character: 1,
+                        },
                     },
                     severity: Some(DiagnosticSeverity::ERROR),
                     message: e.to_string(),
@@ -171,20 +228,20 @@ fn publish_diagnostics(
         };
         diagnostics.push(diagnostic);
     }
-    
+
     let params = PublishDiagnosticsParams {
         uri,
         diagnostics,
         version: None,
     };
-    
+
     let not = Notification {
         method: PublishDiagnostics::METHOD.to_string(),
         params: serde_json::to_value(params)?,
     };
-    
+
     connection.sender.send(Message::Notification(not))?;
-    
+
     Ok(())
 }
 
@@ -201,16 +258,24 @@ fn get_completion_items(_params: &CompletionParams) -> Vec<CompletionItem> {
 
 fn get_definition(params: &GotoDefinitionParams) -> Option<GotoDefinitionResponse> {
     let position = params.text_document_position_params.position;
-    let document_uri = params.text_document_position_params.text_document.uri.clone();
+    let document_uri = params
+        .text_document_position_params
+        .text_document
+        .uri
+        .clone();
     let document_path = document_uri.to_file_path().ok()?;
     let document_text = fs::read_to_string(document_path).ok()?;
-    
+
     let mut parser = Parser::new(&document_text);
     let program = parser.parse_program().ok()?;
-    
-    let target_name = find_identifier_at_pos(&program, (position.line + 1) as usize, (position.character + 1) as usize)?;
+
+    let target_name = find_identifier_at_pos(
+        &program,
+        (position.line + 1) as usize,
+        (position.character + 1) as usize,
+    )?;
     let def_loc = find_definition(&program, &target_name)?;
-    
+
     Some(GotoDefinitionResponse::Scalar(Location {
         uri: document_uri,
         range: Range {
@@ -228,25 +293,33 @@ fn get_definition(params: &GotoDefinitionParams) -> Option<GotoDefinitionRespons
 
 fn get_hover(params: &HoverParams) -> Option<Hover> {
     let position = params.text_document_position_params.position;
-    let document_uri = params.text_document_position_params.text_document.uri.clone();
+    let document_uri = params
+        .text_document_position_params
+        .text_document
+        .uri
+        .clone();
     let document_path = document_uri.to_file_path().ok()?;
     let document_text = fs::read_to_string(document_path).ok()?;
-    
+
     let mut parser = Parser::new(&document_text);
     if let Ok(program) = parser.parse_program() {
-        if let Some(name) = find_identifier_at_pos(&program, (position.line + 1) as usize, (position.character + 1) as usize) {
-             if let Some(_) = find_definition(&program, &name) {
-                 return Some(Hover {
+        if let Some(name) = find_identifier_at_pos(
+            &program,
+            (position.line + 1) as usize,
+            (position.character + 1) as usize,
+        ) {
+            if let Some(_) = find_definition(&program, &name) {
+                return Some(Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
                         value: format!("**Function**: `{}`", name),
                     }),
                     range: None,
                 });
-             }
+            }
         }
     }
-    
+
     None
 }
 
@@ -266,7 +339,11 @@ fn find_in_def(def: &Definition, line: usize, col: usize) -> Option<String> {
     }
 }
 
-fn find_in_block(block: &bend_pvm::compiler::parser::ast::Block, line: usize, col: usize) -> Option<String> {
+fn find_in_block(
+    block: &bend_pvm::compiler::parser::ast::Block,
+    line: usize,
+    col: usize,
+) -> Option<String> {
     for stmt in &block.statements {
         if let Some(name) = find_in_stmt(stmt, line, col) {
             return Some(name);
@@ -289,11 +366,12 @@ fn find_in_expr(expr: &Expr, line: usize, col: usize) -> Option<String> {
     let loc = expr.location();
     match expr {
         Expr::Variable { name, location } => {
-            if location.line == line && col >= location.column && col < location.column + name.len() {
+            if location.line == line && col >= location.column && col < location.column + name.len()
+            {
                 return Some(name.clone());
             }
             None
-        },
+        }
         Expr::FunctionCall { function, args, .. } => {
             if let Some(name) = find_in_expr(function, line, col) {
                 return Some(name);
@@ -304,12 +382,16 @@ fn find_in_expr(expr: &Expr, line: usize, col: usize) -> Option<String> {
                 }
             }
             None
-        },
+        }
         Expr::BinaryOp { left, right, .. } => {
-             if let Some(name) = find_in_expr(left, line, col) { return Some(name); }
-             if let Some(name) = find_in_expr(right, line, col) { return Some(name); }
-             None
-        },
+            if let Some(name) = find_in_expr(left, line, col) {
+                return Some(name);
+            }
+            if let Some(name) = find_in_expr(right, line, col) {
+                return Some(name);
+            }
+            None
+        }
         _ => None,
     }
 }
@@ -317,22 +399,173 @@ fn find_in_expr(expr: &Expr, line: usize, col: usize) -> Option<String> {
 fn find_definition(program: &Program, name: &str) -> Option<AstLocation> {
     for def in &program.definitions {
         match def {
-            Definition::FunctionDef { name: def_name, location, .. } => {
+            Definition::FunctionDef {
+                name: def_name,
+                location,
+                ..
+            } => {
                 if def_name == name {
                     return Some(location.clone());
                 }
-            },
-            Definition::TypeDef { name: def_name, location, .. } => {
+            }
+            Definition::TypeDef {
+                name: def_name,
+                location,
+                ..
+            } => {
                 if def_name == name {
                     return Some(location.clone());
                 }
-            },
-            Definition::ObjectDef { name: def_name, location, .. } => {
+            }
+            Definition::ObjectDef {
+                name: def_name,
+                location,
+                ..
+            } => {
                 if def_name == name {
                     return Some(location.clone());
                 }
-            },
+            }
         }
     }
     None
+}
+
+fn find_references(_params: &ReferenceParams) -> Option<Vec<Location>> {
+    Some(Vec::new())
+}
+
+fn get_document_symbols(params: &DocumentSymbolParams) -> Option<DocumentSymbolResponse> {
+    let document_uri = &params.text_document.uri;
+    let document_path = document_uri.to_file_path().ok()?;
+    let document_text = fs::read_to_string(document_path).ok()?;
+
+    let mut parser = Parser::new(&document_text);
+    let program = parser.parse_program().ok()?;
+
+    let mut symbols = Vec::new();
+
+    for def in &program.definitions {
+        if let Some(symbol) = convert_definition_to_symbol(def, document_uri) {
+            symbols.push(symbol);
+        }
+    }
+
+    Some(DocumentSymbolResponse::Nested(symbols))
+}
+
+fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentSymbol> {
+    match def {
+        Definition::FunctionDef {
+            name,
+            location,
+            body,
+            ..
+        } => {
+            let range = Range {
+                start: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1) as u32,
+                },
+                end: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1 + name.len()) as u32,
+                },
+            };
+
+            let mut children = Vec::new();
+            collect_block_symbols(body, uri, &mut children);
+
+            Some(DocumentSymbol {
+                name: name.clone(),
+                kind: SymbolKind::FUNCTION,
+                tags: None,
+                detail: None,
+                range,
+                selection_range: range,
+                children: if children.is_empty() {
+                    None
+                } else {
+                    Some(children)
+                },
+                data: None,
+                deprecated: None,
+            })
+        }
+        Definition::TypeDef { name, location, .. } => {
+            let range = Range {
+                start: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1) as u32,
+                },
+                end: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1 + name.len()) as u32,
+                },
+            };
+
+            Some(DocumentSymbol {
+                name: name.clone(),
+                kind: SymbolKind::OBJECT,
+                tags: None,
+                detail: None,
+                range,
+                selection_range: range,
+                children: None,
+                data: None,
+                deprecated: None,
+            })
+        }
+        Definition::ObjectDef { name, location, .. } => {
+            let range = Range {
+                start: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1) as u32,
+                },
+                end: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1 + name.len()) as u32,
+                },
+            };
+
+            Some(DocumentSymbol {
+                name: name.clone(),
+                kind: SymbolKind::FUNCTION,
+                tags: None,
+                detail: None,
+                range,
+                selection_range: range,
+                children: if children.is_empty() {
+                    None
+                } else {
+                    Some(children)
+                },
+                data: None,
+                deprecated: None,
+            })
+        }
+    }
+}
+
+fn get_workspace_symbols(_params: &WorkspaceSymbolParams) -> Option<Vec<WorkspaceSymbol>> {
+    // Implementação básica - retorna lista vazia por enquanto
+    // Pode ser expandida para buscar em múltiplos arquivos do workspace
+    Some(Vec::new())
+}
+
+fn collect_block_symbols(
+    block: &bend_pvm::compiler::parser::ast::Block,
+    uri: &Url,
+    symbols: &mut Vec<DocumentSymbol>,
+) {
+    for stmt in &block.statements {
+        match stmt {
+            Statement::LocalDef { function_def, .. } => {
+                if let Some(symbol) = convert_definition_to_symbol(function_def, uri) {
+                    symbols.push(symbol);
+                }
+            }
+            _ => {}
+        }
+    }
 }
