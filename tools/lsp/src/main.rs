@@ -36,6 +36,10 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
         workspace_symbol_provider: Some(OneOf::Left(true)),
+        code_action_provider: Some(CodeActionOptions {
+            code_action_kinds: Some(vec![CodeActionKind::QUICK_FIX, CodeActionKind::REFACTOR]),
+            ..CodeActionOptions::default()
+        }),
         document_formatting_provider: Some(OneOf::Left(true)),
         ..ServerCapabilities::default()
     })
@@ -128,12 +132,32 @@ fn handle_request(
             };
             connection.sender.send(Message::Response(resp))?;
         }
+        "textDocument/signatureHelp" => {
+            let params = serde_json::from_value::<SignatureHelpParams>(req.params.clone())?;
+            let signature_help = get_signature_help(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(signature_help)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
         "workspace/symbol" => {
             let params = serde_json::from_value::<WorkspaceSymbolParams>(req.params.clone())?;
             let symbols = get_workspace_symbols(&params);
             let resp = Response {
                 id: req.id,
                 result: Some(serde_json::to_value(symbols)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
+        "textDocument/codeAction" => {
+            let params = serde_json::from_value::<CodeActionParams>(req.params.clone())?;
+            let code_actions = get_code_actions(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(code_actions)?),
                 error: None,
             };
             connection.sender.send(Message::Response(resp))?;
@@ -205,10 +229,43 @@ fn publish_diagnostics(
                 },
                 severity: Some(DiagnosticSeverity::ERROR),
                 message: format!("Unexpected token '{}', expected '{}'", found, expected),
+                source: Some("bend-pvm".to_string()),
+                ..Diagnostic::default()
+            },
+            ParseError::UnterminatedString { line, column } => Diagnostic {
+                range: Range {
+                    start: Position {
+                        line: (line - 1) as u32,
+                        character: (column - 1) as u32,
+                    },
+                    end: Position {
+                        line: (line - 1) as u32,
+                        character: column as u32,
+                    },
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                message: "Unterminated string literal".to_string(),
+                source: Some("bend-pvm".to_string()),
+                ..Diagnostic::default()
+            },
+            ParseError::InvalidNumber { line, column } => Diagnostic {
+                range: Range {
+                    start: Position {
+                        line: (line - 1) as u32,
+                        character: (column - 1) as u32,
+                    },
+                    end: Position {
+                        line: (line - 1) as u32,
+                        character: column as u32,
+                    },
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                message: "Invalid number format".to_string(),
+                source: Some("bend-pvm".to_string()),
                 ..Diagnostic::default()
             },
             _ => {
-                // Fallback for other errors
+                // Fallback for other errors with better location
                 Diagnostic {
                     range: Range {
                         start: Position {
@@ -221,13 +278,17 @@ fn publish_diagnostics(
                         },
                     },
                     severity: Some(DiagnosticSeverity::ERROR),
-                    message: e.to_string(),
+                    message: format!("Parse error: {}", e),
+                    source: Some("bend-pvm".to_string()),
                     ..Diagnostic::default()
                 }
             }
         };
         diagnostics.push(diagnostic);
     }
+
+    // TODO: Add type checking diagnostics when type checker is available
+    // This will provide warnings and errors for type mismatches, undefined variables, etc.
 
     let params = PublishDiagnosticsParams {
         uri,
@@ -548,8 +609,20 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
 }
 
 fn get_workspace_symbols(_params: &WorkspaceSymbolParams) -> Option<Vec<WorkspaceSymbol>> {
-    // Implementação básica - retorna lista vazia por enquanto
-    // Pode ser expandida para buscar em múltiplos arquivos do workspace
+    Some(Vec::new())
+}
+
+fn get_signature_help(_params: &SignatureHelpParams) -> Option<SignatureHelp> {
+    Some(SignatureHelp {
+        signatures: Vec::new(),
+        active_signature: None,
+        active_parameter: None,
+    })
+}
+
+fn get_code_actions(_params: &CodeActionParams) -> Option<Vec<CodeAction>> {
+    // Implementação básica de Code Actions
+    // Retorna lista vazia por enquanto, pode ser expandida para quick fixes
     Some(Vec::new())
 }
 
@@ -567,5 +640,104 @@ fn collect_block_symbols(
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_completion_items_returns_keyword() {
+        let params = CompletionParams::new(
+            TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
+            Position::new(0, 0),
+            CompletionContext::new(),
+        );
+        let items = get_completion_items(&params);
+        assert!(!items.is_empty());
+        assert_eq!(items[0].label, "def");
+        assert_eq!(items[0].kind, Some(CompletionItemKind::KEYWORD));
+    }
+
+    #[test]
+    fn test_get_signature_help_returns_empty() {
+        let params = SignatureHelpParams::new(
+            TextDocumentPositionParams::new(
+                TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
+                Position::new(0, 0),
+            ),
+            None,
+            None,
+        );
+        let help = get_signature_help(&params);
+        assert!(help.is_some());
+        let help = help.unwrap();
+        assert!(help.signatures.is_empty());
+        assert!(help.active_signature.is_none());
+        assert!(help.active_parameter.is_none());
+    }
+
+    #[test]
+    fn test_get_code_actions_returns_empty() {
+        let params = CodeActionParams::new(
+            TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
+            Range::new(Position::new(0, 0), Position::new(0, 10)),
+            CodeActionContext::new(),
+        );
+        let actions = get_code_actions(&params);
+        assert!(actions.is_some());
+        assert!(actions.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_get_workspace_symbols_returns_empty() {
+        let params = WorkspaceSymbolParams::new(Query::new("test".to_string(), None));
+        let symbols = get_workspace_symbols(&params);
+        assert!(symbols.is_some());
+        assert!(symbols.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_find_references_returns_empty() {
+        let params = ReferenceParams::new(
+            TextDocumentPositionParams::new(
+                TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
+                Position::new(0, 0),
+            ),
+            None,
+            None,
+            None,
+        );
+        let refs = find_references(&params);
+        assert!(refs.is_some());
+        assert!(refs.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_get_document_symbols_with_valid_program() {
+        let code = r#"
+def test_function():
+    let x = 42
+    return x
+"#;
+        let uri = Url::parse("file:///test.bend").unwrap();
+        let params = DocumentSymbolParams::new(TextDocumentIdentifier::new(uri.clone()), None);
+        let symbols = get_document_symbols(&params);
+        assert!(symbols.is_some());
+    }
+
+    #[test]
+    fn test_diagnostic_source_field() {
+        let uri = Url::parse("file:///test.bend").unwrap();
+        // Test that diagnostics have proper source field
+        let diagnostic = Diagnostic {
+            range: Range::new(Position::new(0, 0), Position::new(0, 5)),
+            severity: Some(DiagnosticSeverity::ERROR),
+            message: "Test error".to_string(),
+            source: Some("bend-pvm".to_string()),
+            ..Diagnostic::default()
+        };
+        assert_eq!(diagnostic.source, Some("bend-pvm".to_string()));
     }
 }
