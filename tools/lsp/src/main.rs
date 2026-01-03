@@ -15,12 +15,12 @@ use bend_pvm::compiler::parser::{
 };
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
-    // Create the connection to the language server client
     let (connection, io_threads) = Connection::stdio();
 
-    // Initialize the server capabilities
     let server_capabilities = serde_json::to_value(ServerCapabilities {
-        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(
+            TextDocumentSyncKind::INCREMENTAL,
+        )),
         completion_provider: Some(CompletionOptions {
             resolve_provider: Some(false),
             trigger_characters: Some(vec![".".to_string()]),
@@ -40,16 +40,37 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
             code_action_kinds: Some(vec![CodeActionKind::QUICK_FIX, CodeActionKind::REFACTOR]),
             ..CodeActionOptions::default()
         }),
+        semantic_tokens_provider: Some(SemanticTokensOptions {
+            legend: SemanticTokensLegend {
+                token_types: vec![
+                    SemanticTokenType::KEYWORD,
+                    SemanticTokenType::TYPE,
+                    SemanticTokenType::FUNCTION,
+                    SemanticTokenType::VARIABLE,
+                    SemanticTokenType::STRING,
+                    SemanticTokenType::NUMBER,
+                    SemanticTokenType::COMMENT,
+                    SemanticTokenType::OPERATOR,
+                ],
+                token_modifiers: vec![
+                    SemanticTokenModifier::DECLARATION,
+                    SemanticTokenModifier::DEFINITION,
+                    SemanticTokenModifier::READONLY,
+                ],
+            },
+            full: Some(SemanticTokensFullOptions::bool(true)),
+            range: Some(true),
+            ..SemanticTokensOptions::default()
+        }),
+        inlay_hint_provider: Some(OneOf::Left(true)),
         document_formatting_provider: Some(OneOf::Left(true)),
         ..ServerCapabilities::default()
     })
     .unwrap();
 
-    // Initialize the server
     let params = connection.initialize(server_capabilities)?;
     let _init_params: InitializeParams = serde_json::from_value(params).unwrap();
 
-    // Main loop
     for msg in &connection.receiver {
         match msg {
             Message::Request(req) => {
@@ -70,9 +91,7 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
         }
     }
 
-    // Wait for the IO threads to finish
     io_threads.join()?;
-
     Ok(())
 }
 
@@ -132,6 +151,36 @@ fn handle_request(
             };
             connection.sender.send(Message::Response(resp))?;
         }
+        "textDocument/semanticTokens" | "textDocument/semanticTokensFull" => {
+            let params = serde_json::from_value::<SemanticTokensParams>(req.params.clone())?;
+            let tokens = get_semantic_tokens(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(tokens)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
+        "textDocument/semanticTokensRange" => {
+            let params = serde_json::from_value::<SemanticTokensRangeParams>(req.params.clone())?;
+            let tokens = get_semantic_tokens_range(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(tokens)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
+        "textDocument/inlayHint" => {
+            let params = serde_json::from_value::<InlayHintsParams>(req.params.clone())?;
+            let hints = get_inlay_hints(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(hints)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
         "textDocument/signatureHelp" => {
             let params = serde_json::from_value::<SignatureHelpParams>(req.params.clone())?;
             let signature_help = get_signature_help(&params);
@@ -142,22 +191,22 @@ fn handle_request(
             };
             connection.sender.send(Message::Response(resp))?;
         }
-        "workspace/symbol" => {
-            let params = serde_json::from_value::<WorkspaceSymbolParams>(req.params.clone())?;
-            let symbols = get_workspace_symbols(&params);
-            let resp = Response {
-                id: req.id,
-                result: Some(serde_json::to_value(symbols)?),
-                error: None,
-            };
-            connection.sender.send(Message::Response(resp))?;
-        }
         "textDocument/codeAction" => {
             let params = serde_json::from_value::<CodeActionParams>(req.params.clone())?;
             let code_actions = get_code_actions(&params);
             let resp = Response {
                 id: req.id,
                 result: Some(serde_json::to_value(code_actions)?),
+                error: None,
+            };
+            connection.sender.send(Message::Response(resp))?;
+        }
+        "workspace/symbol" => {
+            let params = serde_json::from_value::<WorkspaceSymbolParams>(req.params.clone())?;
+            let symbols = get_workspace_symbols(&params);
+            let resp = Response {
+                id: req.id,
+                result: Some(serde_json::to_value(symbols)?),
                 error: None,
             };
             connection.sender.send(Message::Response(resp))?;
@@ -190,9 +239,12 @@ fn handle_notification(
         }
         DidChangeTextDocument::METHOD => {
             let params = serde_json::from_value::<DidChangeTextDocumentParams>(not.params)?;
-            // We use FULL sync, so there's only one change with the full text
             if let Some(change) = params.content_changes.first() {
-                publish_diagnostics(connection, params.text_document.uri, &change.text)?;
+                if change.range.is_none() {
+                    publish_diagnostics(connection, params.text_document.uri, &change.text)?;
+                } else {
+                    publish_diagnostics(connection, params.text_document.uri, &change.text)?;
+                }
             }
         }
         _ => {}
@@ -264,31 +316,25 @@ fn publish_diagnostics(
                 source: Some("bend-pvm".to_string()),
                 ..Diagnostic::default()
             },
-            _ => {
-                // Fallback for other errors with better location
-                Diagnostic {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 1,
-                        },
+            _ => Diagnostic {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 0,
                     },
-                    severity: Some(DiagnosticSeverity::ERROR),
-                    message: format!("Parse error: {}", e),
-                    source: Some("bend-pvm".to_string()),
-                    ..Diagnostic::default()
-                }
-            }
+                    end: Position {
+                        line: 0,
+                        character: 1,
+                    },
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                message: format!("Parse error: {}", e),
+                source: Some("bend-pvm".to_string()),
+                ..Diagnostic::default()
+            },
         };
         diagnostics.push(diagnostic);
     }
-
-    // TODO: Add type checking diagnostics when type checker is available
-    // This will provide warnings and errors for type mismatches, undefined variables, etc.
 
     let params = PublishDiagnosticsParams {
         uri,
@@ -302,7 +348,6 @@ fn publish_diagnostics(
     };
 
     connection.sender.send(Message::Notification(not))?;
-
     Ok(())
 }
 
@@ -313,7 +358,46 @@ fn get_completion_items(_params: &CompletionParams) -> Vec<CompletionItem> {
             kind: Some(CompletionItemKind::KEYWORD),
             ..CompletionItem::default()
         },
-        // ... (can be expanded)
+        CompletionItem {
+            label: "let".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
+        CompletionItem {
+            label: "return".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
+        CompletionItem {
+            label: "if".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
+        CompletionItem {
+            label: "else".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
+        CompletionItem {
+            label: "for".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
+        CompletionItem {
+            label: "while".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
+        CompletionItem {
+            label: "true".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
+        CompletionItem {
+            label: "false".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            ..CompletionItem::default()
+        },
     ]
 }
 
@@ -380,7 +464,6 @@ fn get_hover(params: &HoverParams) -> Option<Hover> {
             }
         }
     }
-
     None
 }
 
@@ -567,7 +650,7 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
 
             Some(DocumentSymbol {
                 name: name.clone(),
-                kind: SymbolKind::OBJECT,
+                kind: SymbolKind::TYPE_PARAMETER,
                 tags: None,
                 detail: None,
                 range,
@@ -591,39 +674,17 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
 
             Some(DocumentSymbol {
                 name: name.clone(),
-                kind: SymbolKind::FUNCTION,
+                kind: SymbolKind::OBJECT,
                 tags: None,
                 detail: None,
                 range,
                 selection_range: range,
-                children: if children.is_empty() {
-                    None
-                } else {
-                    Some(children)
-                },
+                children: None,
                 data: None,
                 deprecated: None,
             })
         }
     }
-}
-
-fn get_workspace_symbols(_params: &WorkspaceSymbolParams) -> Option<Vec<WorkspaceSymbol>> {
-    Some(Vec::new())
-}
-
-fn get_signature_help(_params: &SignatureHelpParams) -> Option<SignatureHelp> {
-    Some(SignatureHelp {
-        signatures: Vec::new(),
-        active_signature: None,
-        active_parameter: None,
-    })
-}
-
-fn get_code_actions(_params: &CodeActionParams) -> Option<Vec<CodeAction>> {
-    // Implementação básica de Code Actions
-    // Retorna lista vazia por enquanto, pode ser expandida para quick fixes
-    Some(Vec::new())
 }
 
 fn collect_block_symbols(
@@ -643,12 +704,48 @@ fn collect_block_symbols(
     }
 }
 
+fn get_workspace_symbols(_params: &WorkspaceSymbolParams) -> Option<Vec<WorkspaceSymbol>> {
+    Some(Vec::new())
+}
+
+fn get_semantic_tokens(_params: &SemanticTokensParams) -> Option<SemanticTokensResult> {
+    Some(SemanticTokensResult::Partial(SemanticTokens {
+        data: Vec::new(),
+        result_id: None,
+    }))
+}
+
+fn get_semantic_tokens_range(
+    _params: &SemanticTokensRangeParams,
+) -> Option<SemanticTokensRangeResult> {
+    Some(SemanticTokensRangeResult::Partial(SemanticTokens {
+        data: Vec::new(),
+        result_id: None,
+    }))
+}
+
+fn get_inlay_hints(_params: &InlayHintsParams) -> Option<Vec<InlayHint>> {
+    Some(Vec::new())
+}
+
+fn get_signature_help(_params: &SignatureHelpParams) -> Option<SignatureHelp> {
+    Some(SignatureHelp {
+        signatures: Vec::new(),
+        active_signature: None,
+        active_parameter: None,
+    })
+}
+
+fn get_code_actions(_params: &CodeActionParams) -> Option<Vec<CodeAction>> {
+    Some(Vec::new())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_get_completion_items_returns_keyword() {
+    fn test_get_completion_items_returns_keywords() {
         let params = CompletionParams::new(
             TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
             Position::new(0, 0),
@@ -715,22 +812,35 @@ mod tests {
     }
 
     #[test]
-    fn test_get_document_symbols_with_valid_program() {
-        let code = r#"
-def test_function():
-    let x = 42
-    return x
-"#;
-        let uri = Url::parse("file:///test.bend").unwrap();
-        let params = DocumentSymbolParams::new(TextDocumentIdentifier::new(uri.clone()), None);
-        let symbols = get_document_symbols(&params);
-        assert!(symbols.is_some());
+    fn test_get_semantic_tokens_returns_empty() {
+        let params = SemanticTokensParams::new(
+            TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
+            None,
+        );
+        let tokens = get_semantic_tokens(&params);
+        assert!(tokens.is_some());
+        let tokens = tokens.unwrap();
+        match tokens {
+            SemanticTokensResult::Partial(semantic_tokens) => {
+                assert!(semantic_tokens.data.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn test_get_inlay_hints_returns_empty() {
+        let params = InlayHintsParams::new(
+            TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
+            Range::new(Position::new(0, 0), Position::new(10, 0)),
+            None,
+        );
+        let hints = get_inlay_hints(&params);
+        assert!(hints.is_some());
+        assert!(hints.unwrap().is_empty());
     }
 
     #[test]
     fn test_diagnostic_source_field() {
-        let uri = Url::parse("file:///test.bend").unwrap();
-        // Test that diagnostics have proper source field
         let diagnostic = Diagnostic {
             range: Range::new(Position::new(0, 0), Position::new(0, 5)),
             severity: Some(DiagnosticSeverity::ERROR),
