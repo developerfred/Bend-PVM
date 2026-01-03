@@ -213,7 +213,7 @@ impl MathFunctions {
 }
 
 /// Register math functions in the runtime environment
-pub fn register_math_functions(env: &mut Environment) -> Result<(), MeteringError> {
+pub fn register_math_functions(_env: &mut Environment) -> Result<(), MeteringError> {
     // In a real implementation, this would register the functions in the environment
     // For now, we just return Ok
     Ok(())
@@ -222,337 +222,87 @@ pub fn register_math_functions(env: &mut Environment) -> Result<(), MeteringErro
 /// Generate AST for math library
 pub fn generate_math_ast() -> Vec<Definition> {
     let mut definitions = Vec::new();
+    let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
     
     // Math constants
     definitions.push(Definition::FunctionDef {
         name: "Math/PI".to_string(),
         params: Vec::new(),
         return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         }),
         body: Block {
             statements: vec![
                 Statement::Return {
                     value: Expr::Literal {
                         kind: LiteralKind::Float(std::f32::consts::PI),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     },
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         },
         checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
+        location: dummy_loc.clone(),
     });
     
     definitions.push(Definition::FunctionDef {
         name: "Math/E".to_string(),
         params: Vec::new(),
         return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         }),
         body: Block {
             statements: vec![
                 Statement::Return {
                     value: Expr::Literal {
                         kind: LiteralKind::Float(std::f32::consts::E),
-                        location: Location { line: 0, column: 0, start: 0, end: 0 },
+                        location: dummy_loc.clone(),
                     },
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
+                    location: dummy_loc.clone(),
                 },
             ],
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
+            location: dummy_loc.clone(),
         },
         checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
+        location: dummy_loc.clone(),
     });
     
     // Math functions
-    definitions.push(Definition::FunctionDef {
-        name: "Math/sin".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
+    let math_funcs = vec![
+        ("sin", 1), ("cos", 1), ("tan", 1),
+        ("sqrt", 1), ("exp", 1), ("log", 1),
+        ("floor", 1), ("ceil", 1), ("abs", 1),
+        ("min", 2), ("max", 2), ("pow", 2)
+    ];
+
+    for (name, arity) in math_funcs {
+let mut params = Vec::new();
+        for i in 0..arity {
+            params.push(Parameter {
+                name: format!("x{}", i),
+                ty: Type::F24 {
+                    location: dummy_loc.clone(),
+                },
+                location: dummy_loc.clone(),
+            });
+        }
+
+        definitions.push(Definition::FunctionDef {
+            name: format!("Math/{}", name),
+            params,
+            return_type: Some(Type::F24 {
+                location: dummy_loc.clone(),
+            }),
+            body: Block {
+                statements: Vec::new(), // Built-in
+                location: dummy_loc.clone(),
             },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/cos".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/tan".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/sqrt".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/pow".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            Parameter {
-                name: "y".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/exp".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/log".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/floor".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/ceil".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/abs".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/min".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            Parameter {
-                name: "y".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
-    
-    definitions.push(Definition::FunctionDef {
-        name: "Math/max".to_string(),
-        params: vec![
-            Parameter {
-                name: "x".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-            Parameter {
-                name: "y".to_string(),
-                type_annotation: Some(Type::F24 {
-                    location: Location { line: 0, column: 0, start: 0, end: 0 },
-                }),
-                location: Location { line: 0, column: 0, start: 0, end: 0 },
-            },
-        ],
-        return_type: Some(Type::F24 {
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        }),
-        body: Block {
-            statements: Vec::new(), // Built-in, no body needed
-            location: Location { line: 0, column: 0, start: 0, end: 0 },
-        },
-        checked: Some(true),
-        location: Location { line: 0, column: 0, start: 0, end: 0 },
-    });
+            checked: Some(true),
+            location: dummy_loc.clone(),
+        });
+    }
     
     definitions
 }

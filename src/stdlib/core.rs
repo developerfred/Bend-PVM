@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use crate::compiler::parser::ast::*;
 use crate::compiler::module::ModuleError;
+use crate::stdlib::math::generate_math_ast;
+use crate::stdlib::crypto::generate_crypto_ast;
 
 /// Standard library core module
 pub struct StdlibCore {
@@ -26,12 +28,12 @@ impl StdlibCore {
         
         // Register standard library modules
         core.register_module(StdlibModule::string());
-        core.register_module(StdlibModule::math());
+        core.register_module(StdlibModule { name: "Math".to_string(), definitions: generate_math_ast() });
         core.register_module(StdlibModule::io());
         core.register_module(StdlibModule::list());
         core.register_module(StdlibModule::option());
         core.register_module(StdlibModule::result());
-        core.register_module(StdlibModule::crypto());
+        core.register_module(StdlibModule { name: "Crypto".to_string(), definitions: generate_crypto_ast() });
         
         core
     }
@@ -74,12 +76,19 @@ impl StdlibModule {
     pub fn string() -> Self {
         let mut definitions = Vec::new();
         
-        // String concatenation
+        let string_type = Type::Named {
+            name: "String".to_string(),
+            params: Vec::new(),
+            location: dummy_loc.clone(),
+        };
+
+        // String/concat
         definitions.push(Definition::FunctionDef {
             name: "String/concat".to_string(),
             params: vec![
                 Parameter {
                     name: "a".to_string(),
+<<<<<<< Updated upstream
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
@@ -102,6 +111,18 @@ impl StdlibModule {
                 params: Vec::new(),
                 location: Location { line: 0, column: 0, start: 0, end: 0 },
             }),
+=======
+                    ty: string_type.clone(),
+                    location: dummy_loc.clone(),
+                },
+                Parameter {
+                    name: "b".to_string(),
+                    ty: string_type.clone(),
+                    location: dummy_loc.clone(),
+                },
+            ],
+            return_type: Some(string_type.clone()),
+>>>>>>> Stashed changes
             body: Block {
                 statements: Vec::new(), // Built-in, no body needed
                 location: Location { line: 0, column: 0, start: 0, end: 0 },
@@ -110,18 +131,23 @@ impl StdlibModule {
             location: Location { line: 0, column: 0, start: 0, end: 0 },
         });
         
-        // String length
+        // String/length
         definitions.push(Definition::FunctionDef {
             name: "String/length".to_string(),
             params: vec![
                 Parameter {
                     name: "s".to_string(),
+<<<<<<< Updated upstream
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
                         location: Location { line: 0, column: 0, start: 0, end: 0 },
                     }),
                     location: Location { line: 0, column: 0, start: 0, end: 0 },
+=======
+                    ty: string_type.clone(),
+                    location: dummy_loc.clone(),
+>>>>>>> Stashed changes
                 },
             ],
             return_type: Some(Type::U24 {
@@ -240,6 +266,7 @@ impl StdlibModule {
         }
     }
     
+<<<<<<< Updated upstream
     /// Create the Math module
     pub fn math() -> Self {
         let mut definitions = Vec::new();
@@ -386,27 +413,41 @@ impl StdlibModule {
         }
     }
     
+=======
+>>>>>>> Stashed changes
     /// Create the IO module for blockchain operations
     pub fn io() -> Self {
         let mut definitions = Vec::new();
         
+        let string_type = Type::Named {
+            name: "String".to_string(),
+            params: Vec::new(),
+            location: dummy_loc.clone(),
+        };
+
         // IO/storage_get
         definitions.push(Definition::FunctionDef {
             name: "IO/storage_get".to_string(),
             params: vec![
                 Parameter {
                     name: "key".to_string(),
+<<<<<<< Updated upstream
                     type_annotation: Some(Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
                         location: Location { line: 0, column: 0, start: 0, end: 0 },
                     }),
                     location: Location { line: 0, column: 0, start: 0, end: 0 },
+=======
+                    ty: string_type.clone(),
+                    location: dummy_loc.clone(),
+>>>>>>> Stashed changes
                 },
             ],
             return_type: Some(Type::Named {
                 name: "Result".to_string(),
                 params: vec![
+<<<<<<< Updated upstream
                     Type::Named {
                         name: "String".to_string(),
                         params: Vec::new(),
@@ -417,6 +458,10 @@ impl StdlibModule {
                         params: Vec::new(),
                         location: Location { line: 0, column: 0, start: 0, end: 0 },
                     },
+=======
+                    string_type.clone(),
+                    string_type.clone(),
+>>>>>>> Stashed changes
                 ],
                 location: Location { line: 0, column: 0, start: 0, end: 0 },
             }),
@@ -929,6 +974,7 @@ impl StdlibModule {
             definitions,
         }
     }
+<<<<<<< Updated upstream
     
     /// Create the Crypto module
     pub fn crypto() -> Self {
@@ -1036,4 +1082,6 @@ impl StdlibModule {
             definitions,
         }
     }
+=======
+>>>>>>> Stashed changes
 }

@@ -9,6 +9,23 @@ pub struct Location {
     pub end: usize,
 }
 
+impl Location {
+    /// Create a new location with the same start and end position
+    pub fn new(line: usize, column: usize, start: usize, end: usize) -> Self {
+        Location { line, column, start, end }
+    }
+    
+    /// Create a location that spans from the start of one location to the end of another
+    pub fn span(start: &Location, end: &Location) -> Self {
+        Location {
+            line: start.line,
+            column: start.column,
+            start: start.start,
+            end: end.end,
+        }
+    }
+}
+
 /// Represents a complete Bend-PVM program
 #[derive(Debug, Clone)]
 pub struct Program {
