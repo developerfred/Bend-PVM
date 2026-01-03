@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Build artifacts
+target/
+Cargo.lock
+
+# Documentation
+docs/
+README.md
+LICENSE
+
+# Tests
+tests/
+test_project/
+
+# Development
+*.log
+.DS_Store
+*.local
+
+# CI/CD
+.github/
