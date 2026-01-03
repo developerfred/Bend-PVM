@@ -3,7 +3,7 @@ pub mod math;
 pub mod crypto;
 
 use self::core::StdlibCore;
-use self::math::MathFunctions;
+use self::math::{MathFunctions, SafeMath, BigIntMath, BitwiseMath, Random, Percentage};
 use self::crypto::CryptoFunctions;
 
 /// Initialize the standard library
@@ -24,4 +24,29 @@ pub fn get_math_functions() -> MathFunctions {
 /// Get the crypto functions
 pub fn get_crypto_functions() -> CryptoFunctions {
     CryptoFunctions::new()
+}
+
+/// Get safe math operations
+pub fn get_safe_math() -> SafeMath {
+    SafeMath
+}
+
+/// Get big integer operations
+pub fn get_bigint_math() -> BigIntMath {
+    BigIntMath
+}
+
+/// Get bitwise operations
+pub fn get_bitwise_math() -> BitwiseMath {
+    BitwiseMath
+}
+
+/// Get random number generator
+pub fn get_random() -> Random {
+    Random
+}
+
+/// Get percentage calculations
+pub fn get_percentage() -> Percentage {
+    Percentage
 }
