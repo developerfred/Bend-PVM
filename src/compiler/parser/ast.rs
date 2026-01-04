@@ -606,17 +606,10 @@ impl AstValidator {
         errors: &mut Vec<AstValidationError>,
     ) {
         match def {
-            Definition::FunctionDef {
-                
-                body,
-                
-                ..
-            } => {
+            Definition::FunctionDef { body, .. } => {
                 self.validate_block(body, errors);
             }
-            Definition::TypeDef {
-                variants,  ..
-            } => {
+            Definition::TypeDef { variants, .. } => {
                 let mut variant_names = std::collections::HashSet::new();
                 for variant in variants {
                     if !variant_names.insert(variant.name.clone()) {
@@ -627,9 +620,7 @@ impl AstValidator {
                     }
                 }
             }
-            Definition::ObjectDef {
-                fields,  ..
-            } => {
+            Definition::ObjectDef { fields, .. } => {
                 let mut field_names = std::collections::HashSet::new();
                 for field in fields {
                     if !field_names.insert(field.name.clone()) {
@@ -640,18 +631,10 @@ impl AstValidator {
                     }
                 }
             }
-            Definition::TypeAlias {
-                target_type,
-                
-                ..
-            } => {
+            Definition::TypeAlias { target_type, .. } => {
                 self.validate_type(target_type, errors);
             }
-            Definition::Module {
-                definitions,
-                
-                ..
-            } => {
+            Definition::Module { definitions, .. } => {
                 let mut def_names = std::collections::HashSet::new();
                 for def in definitions {
                     let def_name = match def {

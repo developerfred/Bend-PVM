@@ -3,7 +3,6 @@
 //! This module provides AST structures for representing Solidity contracts,
 //! enabling parsing and analysis during migration.
 
-
 /// Represents a Solidity source location
 #[derive(Debug, Clone, PartialEq)]
 pub struct SolLocation {

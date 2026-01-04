@@ -135,7 +135,7 @@ impl StringUtils {
 
     /// Keccak256 hash of string
     pub fn keccak256(s: &str) -> String {
-        use tiny_keccak::{HashOutput, Keccak};
+        use tiny_keccak::{Hasher, Keccak};
         let mut keccak = Keccak::v256();
         let mut output = [0u8; 32];
         keccak.update(s.as_bytes());

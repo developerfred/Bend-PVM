@@ -669,7 +669,10 @@ impl TypeChecker {
                 LiteralKind::Char(_) => Ok(TypeInfo::U24),
                 LiteralKind::Symbol(_) => Ok(TypeInfo::U24),
             },
-            Expr::Tuple { elements, location: _ } => {
+            Expr::Tuple {
+                elements,
+                location: _,
+            } => {
                 let mut element_types = Vec::new();
                 for element in elements {
                     element_types.push(self.check_expr(element)?);
@@ -677,7 +680,10 @@ impl TypeChecker {
 
                 Ok(TypeInfo::Tuple(element_types))
             }
-            Expr::List { elements, location: _ } => {
+            Expr::List {
+                elements,
+                location: _,
+            } => {
                 // Infer the element type from the first element, or use Any if empty
                 let element_type = if let Some(first) = elements.first() {
                     self.check_expr(first)?

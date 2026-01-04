@@ -3,10 +3,10 @@
 //! This module provides utilities for converting Solidity smart contracts
 //! to Bend-PVM format, enabling migration from Ethereum ecosystem.
 
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use thiserror::Error;
-use serde::Serialize;
 
 pub mod analyzer;
 pub mod ast;

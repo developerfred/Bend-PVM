@@ -92,6 +92,24 @@ impl ExecutionContext {
         }
     }
 
+    /// Create a new execution context with default values (for testing)
+    pub fn new_default() -> Self {
+        ExecutionContext {
+            address: [0u8; 32],
+            caller: [0u8; 32],
+            value: 0,
+            input: Vec::new(),
+            block_number: 0,
+            block_timestamp: 0,
+            gas_limit: 1000000,
+            gas_used: 0,
+            proof_size_limit: 1000000,
+            proof_size_used: 0,
+            storage_deposit_limit: 1000000,
+            storage_deposit_used: 0,
+        }
+    }
+
     /// Check if there's enough gas for an operation
     pub fn check_gas(&self, gas: u64) -> Result<(), EnvError> {
         if self.gas_used + gas > self.gas_limit {

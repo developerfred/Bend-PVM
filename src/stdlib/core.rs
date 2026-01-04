@@ -138,6 +138,83 @@ impl StdlibModule {
             location: dummy_loc.clone(),
         });
 
+        // String/to_uppercase
+        definitions.push(Definition::FunctionDef {
+            name: "String/to_uppercase".to_string(),
+            params: vec![Parameter {
+                name: "s".to_string(),
+                ty: string_type.clone(),
+                location: dummy_loc.clone(),
+            }],
+            return_type: Some(string_type.clone()),
+            body: Block {
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
+            },
+            checked: Some(true),
+            location: dummy_loc.clone(),
+        });
+
+        // String/to_lowercase
+        definitions.push(Definition::FunctionDef {
+            name: "String/to_lowercase".to_string(),
+            params: vec![Parameter {
+                name: "s".to_string(),
+                ty: string_type.clone(),
+                location: dummy_loc.clone(),
+            }],
+            return_type: Some(string_type.clone()),
+            body: Block {
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
+            },
+            checked: Some(true),
+            location: dummy_loc.clone(),
+        });
+
+        // String/trim
+        definitions.push(Definition::FunctionDef {
+            name: "String/trim".to_string(),
+            params: vec![Parameter {
+                name: "s".to_string(),
+                ty: string_type.clone(),
+                location: dummy_loc.clone(),
+            }],
+            return_type: Some(string_type.clone()),
+            body: Block {
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
+            },
+            checked: Some(true),
+            location: dummy_loc.clone(),
+        });
+
+        // String/contains
+        definitions.push(Definition::FunctionDef {
+            name: "String/contains".to_string(),
+            params: vec![
+                Parameter {
+                    name: "s".to_string(),
+                    ty: string_type.clone(),
+                    location: dummy_loc.clone(),
+                },
+                Parameter {
+                    name: "substring".to_string(),
+                    ty: string_type.clone(),
+                    location: dummy_loc.clone(),
+                },
+            ],
+            return_type: Some(Type::U24 {
+                location: dummy_loc.clone(),
+            }),
+            body: Block {
+                statements: Vec::new(),
+                location: dummy_loc.clone(),
+            },
+            checked: Some(true),
+            location: dummy_loc.clone(),
+        });
+
         StdlibModule {
             name: "String".to_string(),
             definitions,
