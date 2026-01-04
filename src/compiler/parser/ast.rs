@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 /// Represents a source location for AST nodes
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
@@ -124,7 +124,7 @@ pub struct TypeVariant {
 }
 
 /// Represents a type in the Bend-PVM language
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Named {
         name: String,
@@ -179,7 +179,7 @@ pub enum Type {
 }
 
 /// Represents a type bound for generics
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeBound {
     pub trait_name: String,
     pub args: Vec<Type>,
