@@ -130,6 +130,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         output
                     })
             });
+<<<<<<< HEAD
+=======
+            
+>>>>>>> 1289cc4 (fix: Fix compilation errors, clippy warnings, and resolve outdated issues)
 
             // Set compiler options
             let options = CompilerOptions {

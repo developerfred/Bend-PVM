@@ -31,11 +31,11 @@ pub struct FormatterConfig {
 impl Default for FormatterConfig {
     fn default() -> Self {
         Self {
-            indent_size: 4,
-            max_line_length: 120,
-            use_tabs: false,
-            blank_line_after_fn: true,
-            space_around_operators: true,
+            indent_size:4,
+            max_line_length:120,
+            use_tabs:false,
+            blank_line_after_fn:true,
+            space_around_operators:true,
         }
     }
 }
@@ -64,7 +64,7 @@ impl Formatter {
     pub fn new() -> Self {
         Self {
             config: FormatterConfig::default(),
-            current_indent: 0,
+            current_indent:0,
         }
     }
 
@@ -72,22 +72,22 @@ impl Formatter {
     pub fn with_config(config: FormatterConfig) -> Self {
         Self {
             config,
-            current_indent: 0,
+            current_indent:0,
         }
     }
 
     /// Format Bend-PVM source code
-    pub fn format_source(&mut self, source: &str) -> Result<String, String> {
-        let mut result = String::new();
+    pub fn format_source(&self, source: &str) -> Result<String, String> {
+        let mut formatted = String::new();
         let lines = source.lines().collect::<Vec<_>>();
 
         for line in lines {
             let formatted_line = self.format_line(line);
-            result.push_str(&formatted_line);
-            result.push('\n');
+            formatted.push_str(&formatted_line);
+            formatted.push('\n');
         }
 
-        Ok(self.normalize_whitespace(&result))
+        Ok(self.normalize_whitespace(&formatted))
     }
 
     /// Format a single line with proper indentation
