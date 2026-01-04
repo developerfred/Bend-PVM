@@ -73,7 +73,7 @@ impl InputValidator {
     pub fn validate_input(
         &mut self,
         input: &str,
-        rule_name: &str,
+        _rule_name: &str,
     ) -> Result<String, SecurityError> {
         self.validation_count += 1;
 

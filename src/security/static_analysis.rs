@@ -4,7 +4,6 @@
 /// code quality assessment, and automated security verification.
 use crate::compiler::parser::ast::*;
 use crate::security::{SecurityError, SecuritySeverity};
-use std::collections::{HashMap, HashSet};
 
 /// Static analysis issue
 #[derive(Debug, Clone)]

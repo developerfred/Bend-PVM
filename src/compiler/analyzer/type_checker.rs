@@ -255,7 +255,7 @@ impl TypeChecker {
                         .insert(name.clone(), Symbol::Type(params.clone()));
 
                     // Create a single variant for the object
-                    let mut object_variant = TypeVariant {
+                    let object_variant = TypeVariant {
                         name: name.clone(),
                         fields: fields.clone(),
                         location: definition.location().clone(),
@@ -587,7 +587,7 @@ impl TypeChecker {
         expected_type: &TypeInfo,
     ) -> Result<(), TypeError> {
         match pattern {
-            Pattern::Variable { name, location } => {
+            Pattern::Variable { name, location: _ } => {
                 // Add the variable to the symbol table with the expected type
                 self.symbols
                     .insert(name.clone(), Symbol::Variable(expected_type.clone()));
@@ -661,7 +661,7 @@ impl TypeChecker {
                     })
                 }
             }
-            Expr::Literal { kind, location } => match kind {
+            Expr::Literal { kind, location: _ } => match kind {
                 LiteralKind::Uint(_) => Ok(TypeInfo::U24),
                 LiteralKind::Int(_) => Ok(TypeInfo::I24),
                 LiteralKind::Float(_) => Ok(TypeInfo::F24),
@@ -669,7 +669,7 @@ impl TypeChecker {
                 LiteralKind::Char(_) => Ok(TypeInfo::U24),
                 LiteralKind::Symbol(_) => Ok(TypeInfo::U24),
             },
-            Expr::Tuple { elements, location } => {
+            Expr::Tuple { elements, location: _ } => {
                 let mut element_types = Vec::new();
                 for element in elements {
                     element_types.push(self.check_expr(element)?);
@@ -677,7 +677,7 @@ impl TypeChecker {
 
                 Ok(TypeInfo::Tuple(element_types))
             }
-            Expr::List { elements, location } => {
+            Expr::List { elements, location: _ } => {
                 // Infer the element type from the first element, or use Any if empty
                 let element_type = if let Some(first) = elements.first() {
                     self.check_expr(first)?
@@ -703,7 +703,7 @@ impl TypeChecker {
             Expr::FunctionCall {
                 function,
                 args,
-                named_args,
+                named_args: _,
                 location,
             } => {
                 let function_type = self.check_expr(function)?;

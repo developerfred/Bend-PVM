@@ -4,7 +4,8 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::compiler::parser::ast::*;
+    use crate::compiler::parser::parser::Parser;
 
     #[test]
     fn test_parser_basic_function() {

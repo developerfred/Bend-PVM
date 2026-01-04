@@ -1,6 +1,4 @@
 use crate::testing::{TestError, TestEnvironment};
-use crate::runtime::storage::StorageManager;
-use crate::runtime::metering::MeteringContext;
 
 /// Test assertions for verifying test results
 pub struct TestAssertions<'a> {
@@ -117,14 +115,14 @@ impl<'a> TestAssertions<'a> {
     }
     
     /// Assert that an event was emitted
-    pub fn assert_event_emitted(&self, name: &str) -> Result<(), TestError> {
+    pub fn assert_event_emitted(&self, _name: &str) -> Result<(), TestError> {
         // In a real implementation, this would check the events emitted by the contract
         // For now, we just return Ok
         Ok(())
     }
     
     /// Assert that an event was emitted with specific data
-    pub fn assert_event_data(&self, name: &str, data: &[u8]) -> Result<(), TestError> {
+    pub fn assert_event_data(&self, _name: &str, _data: &[u8]) -> Result<(), TestError> {
         // In a real implementation, this would check the events emitted by the contract
         // For now, we just return Ok
         Ok(())

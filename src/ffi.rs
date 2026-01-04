@@ -305,7 +305,7 @@ impl FFIManager {
         }
 
         // Encode call data
-        let call_data = ABICodec::encode_call(signature, &args)?;
+        let _call_data = ABICodec::encode_call(signature, &args)?;
 
         // Simulate external call (in real implementation, this would make actual external call)
         match function_name {

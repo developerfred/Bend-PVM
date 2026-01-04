@@ -211,7 +211,7 @@ impl ModuleSystem {
                 Import::FromImport {
                     path,
                     names,
-                    location,
+                    location: _,
                 } => {
                     // Resolve the module path
                     let module_path = self
@@ -225,7 +225,7 @@ impl ModuleSystem {
                     for name in names {
                         let import_name = if name.name == "*" {
                             // Import all exports
-                            for (export_name, symbol) in &imported_module.exports {
+                            for (export_name, _symbol) in &imported_module.exports {
                                 let alias = format!("{}/{}", imported_module.name, export_name);
                                 module.namespace.add_import(
                                     export_name.clone(),
@@ -239,7 +239,7 @@ impl ModuleSystem {
                         };
 
                         // Get the symbol from the imported module
-                        let symbol =
+                        let _symbol =
                             imported_module.exports.get(&import_name).ok_or_else(|| {
                                 ModuleError::SymbolNotFound(
                                     import_name.clone(),
@@ -266,7 +266,7 @@ impl ModuleSystem {
                         .imports
                         .insert(imported_module.name.clone(), imported_module);
                 }
-                Import::DirectImport { names, location } => {
+                Import::DirectImport { names, location: _ } => {
                     for name in names {
                         // Resolve the module path
                         let module_path = self
@@ -277,7 +277,7 @@ impl ModuleSystem {
                         let imported_module = self.load_module(&module_path)?;
 
                         // Add all exports as imports with qualified names
-                        for (export_name, symbol) in &imported_module.exports {
+                        for (export_name, _symbol) in &imported_module.exports {
                             let alias = format!("{}/{}", imported_module.name, export_name);
                             module.namespace.add_import(
                                 export_name.clone(),

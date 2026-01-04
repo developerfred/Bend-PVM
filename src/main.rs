@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
 
@@ -131,33 +132,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     })
             });
             
-            // Set compiler options
-            let options = CompilerOptions {
-                output,
-                optimize,
-                debug,
-                type_check,
-                assembly,
-                metadata: !no_metadata,
-                abi: !no_abi,
-            };
-            
-            let type_check = if cli.auto {
-                // In auto mode, always type check unless explicitly disabled
-                !no_type_check
-            } else {
-                !no_type_check
-            };
-            // Determine output path if not specified
-            let output = output.or_else(|| {
-                file.file_stem()
-                    .map(|stem| {
-                        let mut output = PathBuf::from(stem);
-                        output.set_extension("bin");
-                        output
-                    })
-            });
-            
+
             // Set compiler options
             let options = CompilerOptions {
                 output,

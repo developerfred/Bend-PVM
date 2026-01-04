@@ -164,6 +164,7 @@ impl Default for StorageDepositCosts {
 }
 
 /// Metering context for tracking resources
+#[derive(Clone, Debug)]
 pub struct MeteringContext {
     /// Gas costs
     pub gas_costs: GasCosts,
@@ -247,32 +248,6 @@ impl MeteringContext {
         {
             return Err(MeteringError::StorageDepositLimitExceeded);
         }
-        self.storage_deposit_used = self.storage_deposit_used.saturating_add(amount);
-        Ok(())
-    }
-
-    /// Charge proof size for an operation
-    pub fn charge_proof_size(&mut self, amount: u64) -> Result<(), MeteringError> {
-        // FIXED: Use checked arithmetic to prevent overflow
-        if amount > self.proof_size_limit.saturating_sub(self.proof_size_used) {
-            return Err(MeteringError::ProofSizeLimitExceeded);
-        }
-
-        self.proof_size_used = self.proof_size_used.saturating_add(amount);
-        Ok(())
-    }
-
-    /// Charge storage deposit for an operation
-    pub fn charge_storage_deposit(&mut self, amount: u128) -> Result<(), MeteringError> {
-        // FIXED: Use checked arithmetic to prevent overflow
-        if amount
-            > self
-                .storage_deposit_limit
-                .saturating_sub(self.storage_deposit_used)
-        {
-            return Err(MeteringError::StorageDepositLimitExceeded);
-        }
-
         self.storage_deposit_used = self.storage_deposit_used.saturating_add(amount);
         Ok(())
     }

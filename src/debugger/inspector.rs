@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use crate::debugger::{DebugInfo, DebuggerState, DebuggerError};
 use crate::compiler::codegen::risc_v::Instruction;
-use crate::compiler::parser::ast::{Expr, Statement};
 
 /// Debug inspector for examining program state
 pub struct DebugInspector {
@@ -71,13 +70,13 @@ impl DebugInspector {
         let mut result = HashMap::new();
         
         // Get the current function
-        let function_name = match self.current_function() {
+        let _function_name = match self.current_function() {
             Some(name) => name,
             None => return result, // No function, no locals
         };
         
         // Get the function's local variables
-        for (name, location) in &self.debug_info.locals {
+        for (name, _location) in &self.debug_info.locals {
             // In a real implementation, we would look up the variable's value
             // based on its location (stack or register)
             // For now, just use the values from the state
@@ -144,7 +143,7 @@ impl DebugInspector {
     
     /// Get a pretty-printed representation of memory
     pub fn memory_dump(&self, address: u32, size: usize) -> Vec<(u32, Vec<u8>)> {
-        let mut result = Vec::new();
+        let mut result: Vec<(u32, Vec<u8>)> = Vec::new();
         
         for i in 0..size {
             let addr = address + i as u32;

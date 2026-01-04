@@ -388,7 +388,7 @@ impl FuzzTester {
     /// Generate a test case
     fn generate_test_case(
         &mut self,
-        target_functions: &[String],
+        _target_functions: &[String],
     ) -> Result<FuzzTestCase, SecurityError> {
         let start_time = SystemTime::now();
 

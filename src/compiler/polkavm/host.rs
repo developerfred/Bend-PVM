@@ -1,7 +1,6 @@
 /// This module defines the host functions that the PolkaVM runtime provides to
 /// contract executables. These functions allow the contract to interact with the
 /// blockchain environment.
-
 // Standard host functions provided to all contracts
 #[repr(u32)]
 pub enum HostFunction {

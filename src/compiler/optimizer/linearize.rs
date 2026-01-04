@@ -166,7 +166,7 @@ impl LinearizePass {
                 location,
             } => {
                 // Linearize the function
-                let (linearized_function, mut function_statements, function_modified) =
+                let (linearized_function, function_statements, function_modified) =
                     self.linearize_expr(function);
 
                 // Linearize the arguments
@@ -282,7 +282,7 @@ impl OptimizationPass for LinearizePass {
         "Linearizes the AST by extracting complex subexpressions into separate statements"
     }
 
-    fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
+    fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError> {
         let mut linearizer = LinearizePass::new();
         let mut modified = false;
         let mut new_definitions = Vec::new();

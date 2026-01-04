@@ -3,17 +3,14 @@ pub mod breakpoint;
 pub mod disassembler;
 pub mod state;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::collections::HashMap;
 use thiserror::Error;
 
-use crate::compiler::parser::ast::*;
 use crate::compiler::codegen::risc_v::Instruction;
 use crate::runtime::env::{Environment, ExecutionContext};
-use self::inspector::DebugInspector;
 use self::breakpoint::Breakpoint;
 use self::state::{DebuggerState, ExecutionState};
-use self::disassembler::Disassembler;
 
 /// Debugger errors
 #[derive(Error, Debug)]
@@ -277,10 +274,10 @@ impl Debugger {
             return Ok(());
         }
         
-        let instruction = &self.instructions[pc];
+        let instruction = self.instructions[pc].clone();
         
         // Execute the instruction
-        match self.execute_instruction(instruction) {
+        match self.execute_instruction(&instruction) {
             Ok(_) => {
                 // Increment the program counter
                 self.state.pc += 1;
@@ -358,7 +355,7 @@ impl Debugger {
             return Ok(());
         }
         
-        let instruction = &self.instructions[pc];
+        let instruction = self.instructions[pc].clone();
         
         // Check if the instruction is a function call
         match instruction {
@@ -496,14 +493,14 @@ impl Debugger {
     }
     
     /// Execute an instruction
-    fn execute_instruction(&mut self, instruction: &Instruction) -> Result<(), DebuggerError> {
+    fn execute_instruction(&mut self, _instruction: &Instruction) -> Result<(), DebuggerError> {
         // In a real implementation, this would execute the instruction
         // For now, we just return Ok
         Ok(())
     }
     
     /// Convert a label to a function name
-    fn label_to_function(&self, label: &str) -> Option<String> {
+    fn label_to_function(&self, _label: &str) -> Option<String> {
         // In a real implementation, this would parse the label to extract the function name
         // For now, we just return None
         None

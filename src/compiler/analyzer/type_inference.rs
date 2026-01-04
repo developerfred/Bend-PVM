@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, BTreeSet};
 use thiserror::Error;
 
 use crate::compiler::parser::ast::*;
@@ -34,7 +34,7 @@ pub enum InferType {
 /// A type schema (generic type)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeSchema {
-    pub type_vars: HashSet<String>,
+    pub type_vars: BTreeSet<String>,
     pub type_: InferType,
 }
 
@@ -73,35 +73,35 @@ impl TypeEnv {
         self.symbols.insert(
             "u24".to_string(),
             Symbol::Type(TypeSchema {
-                type_vars: HashSet::new(),
+                type_vars: BTreeSet::new(),
                 type_: InferType::U24,
             }),
         );
         self.symbols.insert(
             "i24".to_string(),
             Symbol::Type(TypeSchema {
-                type_vars: HashSet::new(),
+                type_vars: BTreeSet::new(),
                 type_: InferType::I24,
             }),
         );
         self.symbols.insert(
             "f24".to_string(),
             Symbol::Type(TypeSchema {
-                type_vars: HashSet::new(),
+                type_vars: BTreeSet::new(),
                 type_: InferType::F24,
             }),
         );
         self.symbols.insert(
             "String".to_string(),
             Symbol::Type(TypeSchema {
-                type_vars: HashSet::new(),
+                type_vars: BTreeSet::new(),
                 type_: InferType::Named("String".to_string(), vec![]),
             }),
         );
         self.symbols.insert(
             "Bool".to_string(),
             Symbol::Type(TypeSchema {
-                type_vars: HashSet::new(),
+                type_vars: BTreeSet::new(),
                 type_: InferType::Named("Bool".to_string(), vec![]),
             }),
         );
@@ -267,13 +267,13 @@ impl InferType {
         InferType::Variable(format!("{}_{}", prefix, id))
     }
 
-    pub fn free_vars(&self) -> HashSet<String> {
-        let mut vars = HashSet::new();
+    pub fn free_vars(&self) -> BTreeSet<String> {
+        let mut vars = BTreeSet::new();
         self.collect_free_vars(&mut vars);
         vars
     }
 
-    fn collect_free_vars(&self, vars: &mut HashSet<String>) {
+    fn collect_free_vars(&self, vars: &mut BTreeSet<String>) {
         match self {
             InferType::Named(_, params) => params.iter().for_each(|p| p.collect_free_vars(vars)),
             InferType::Function(param, result) => {
@@ -400,7 +400,7 @@ impl TypeInferrer {
                 self.env
                     .symbols
                     .insert(name.clone(), Symbol::Function(fn_type));
-                let body_type = self.check_expr(body)?;
+                let body_type = self.check_block(body)?;
                 self.solver.unify(&body_type, &return_type)?;
                 Ok(InferType::None)
             }
@@ -429,7 +429,7 @@ impl TypeInferrer {
             } => {
                 let target = self.infer_from_ast_type(target_type)?;
                 let schema = TypeSchema {
-                    type_vars: HashSet::new(),
+                    type_vars: BTreeSet::new(),
                     type_: target,
                 };
                 self.env.symbols.insert(name.clone(), Symbol::Type(schema));
@@ -484,7 +484,7 @@ impl TypeInferrer {
                 let _value_type = self.check_expr(value)?;
                 let mut result_type = None;
                 for case in cases {
-                    let case_type = self.check_expr(&case.body)?;
+                    let case_type = self.check_block(&case.body)?;
                     if let Some(rt) = result_type.clone() {
                         self.solver.unify(&rt, &case_type)?;
                     } else {
@@ -535,15 +535,17 @@ impl TypeInferrer {
                 Ok(InferType::Named("List".to_string(), vec![element_type]))
             }
             Expr::Constructor { name, args, .. } => {
-                if let Some(type_def) = self
+                let type_name = self
                     .env
                     .type_defs
                     .values()
                     .find(|d| d.variants.iter().any(|v| v.name == *name))
-                {
+                    .map(|d| d.name.clone());
+
+                if let Some(type_name) = type_name {
                     let _arg_types: Result<Vec<_>, _> =
                         args.iter().map(|e| self.check_expr(e)).collect();
-                    Ok(InferType::Named(type_def.name.clone(), vec![]))
+                    Ok(InferType::Named(type_name, vec![]))
                 } else {
                     Err(TypeError::Generic(format!("Unknown constructor: {}", name)))
                 }
@@ -617,10 +619,10 @@ impl TypeInferrer {
     fn infer_from_ast_type(&self, ast_type: &Type) -> Result<InferType, TypeError> {
         match ast_type {
             Type::Named { name, params, .. } => {
-                let param_types: Result<Vec<_>, _> = params
+                let param_types = params
                     .iter()
                     .map(|p| self.infer_from_ast_type(p))
-                    .collect()?;
+                    .collect::<Result<Vec<_>, _>>()?;
                 Ok(InferType::Named(name.clone(), param_types))
             }
             Type::Function { param, result, .. } => {
@@ -632,10 +634,10 @@ impl TypeInferrer {
                 ))
             }
             Type::Tuple { elements, .. } => {
-                let element_types: Result<Vec<_>, _> = elements
+                let element_types = elements
                     .iter()
                     .map(|e| self.infer_from_ast_type(e))
-                    .collect()?;
+                    .collect::<Result<Vec<_>, _>>()?;
                 Ok(InferType::Tuple(element_types))
             }
             Type::U24 { .. } => Ok(InferType::U24),

@@ -1,10 +1,9 @@
-use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::compiler::parser::parser::Parser;
 use crate::compiler::analyzer::type_checker::TypeChecker;
 use crate::compiler::optimizer::passes::OptimizationManager;
-use crate::compiler::codegen::risc_v::{RiscVCodegen, Instruction};
+use crate::compiler::codegen::risc_v::RiscVCodegen;
 use crate::compiler::polkavm::bridge::compile_to_polkavm;
 use crate::runtime::env::{Environment, ExecutionContext, ExecutionResult};
 use crate::testing::{TestCase, TestError, TestEnvironment};
@@ -120,7 +119,7 @@ impl TestRunner {
         
         // Check for timeout
         if start_time.elapsed() > self.timeout {
-            return Err(TestError::Timeout);
+            return Err(TestError::Timeout(self.timeout));
         }
         
         // Check the result

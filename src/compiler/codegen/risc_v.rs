@@ -710,7 +710,7 @@ impl RiscVCodegen {
 
                 // Else branch
                 self.instructions.push(Instruction::Label(else_label));
-                let else_result = self.generate_block(else_branch)?;
+                let _else_result = self.generate_block(else_branch)?;
 
                 // End of if
                 self.instructions.push(Instruction::Label(end_label));

@@ -82,6 +82,7 @@ pub enum Definition {
         name: String,
         type_params: Vec<String>,
         fields: Vec<Field>,
+        functions: Vec<Definition>,
         location: Location,
     },
     TypeAlias {
@@ -606,15 +607,15 @@ impl AstValidator {
     ) {
         match def {
             Definition::FunctionDef {
-                name,
+                
                 body,
-                location,
+                
                 ..
             } => {
                 self.validate_block(body, errors);
             }
             Definition::TypeDef {
-                variants, location, ..
+                variants,  ..
             } => {
                 let mut variant_names = std::collections::HashSet::new();
                 for variant in variants {
@@ -627,7 +628,7 @@ impl AstValidator {
                 }
             }
             Definition::ObjectDef {
-                fields, location, ..
+                fields,  ..
             } => {
                 let mut field_names = std::collections::HashSet::new();
                 for field in fields {
@@ -641,14 +642,14 @@ impl AstValidator {
             }
             Definition::TypeAlias {
                 target_type,
-                location,
+                
                 ..
             } => {
                 self.validate_type(target_type, errors);
             }
             Definition::Module {
                 definitions,
-                location,
+                
                 ..
             } => {
                 let mut def_names = std::collections::HashSet::new();

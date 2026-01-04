@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use thiserror::Error;
+use serde::Serialize;
 
 pub mod analyzer;
 pub mod ast;
@@ -39,7 +40,7 @@ pub enum MigrationError {
 }
 
 /// Severity levels for compatibility issues
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum IssueSeverity {
     /// Feature is fully supported
     Supported,
@@ -49,6 +50,17 @@ pub enum IssueSeverity {
     Manual,
     /// Feature is not supported
     Unsupported,
+}
+
+impl std::fmt::Display for IssueSeverity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IssueSeverity::Supported => write!(f, "Supported"),
+            IssueSeverity::Partial => write!(f, "Partial"),
+            IssueSeverity::Manual => write!(f, "Manual"),
+            IssueSeverity::Unsupported => write!(f, "Unsupported"),
+        }
+    }
 }
 
 /// Migration statistics
@@ -67,7 +79,7 @@ pub struct MigrationStats {
 }
 
 /// A single migration issue
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MigrationIssue {
     /// Issue description
     pub description: String,
@@ -147,7 +159,7 @@ impl SolidityMigrator {
     fn initialize_erc_templates(&mut self) {
         // ERC-20 template
         self.erc_templates.insert(
-            "ERC20",
+            "ERC20".to_string(),
             r#"
 /// ERC-20 Token Implementation for Bend-PVM
 contract ERC20 is BendContract {
@@ -242,12 +254,13 @@ contract ERC20 is BendContract {
         self.allowances[owner][spender]
     }
 }
-"#,
+"#
+            .to_string(),
         );
 
         // ERC-721 template
         self.erc_templates.insert(
-            "ERC721",
+            "ERC721".to_string(),
             r#"
 /// ERC-721 Non-Fungible Token Implementation for Bend-PVM
 contract ERC721 is BendContract {
@@ -370,7 +383,8 @@ contract ERC721 is BendContract {
         emit Transfer(owner, Address::zero(), token_id)
     }
 }
-"#,
+"#
+            .to_string(),
         );
     }
 

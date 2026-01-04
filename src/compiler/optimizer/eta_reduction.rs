@@ -304,7 +304,7 @@ impl OptimizationPass for EtaReductionPass {
         "Performs eta reduction for functions that just wrap other functions"
     }
 
-    fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
+    fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError> {
         let mut modified = false;
         let mut new_definitions = Vec::new();
 

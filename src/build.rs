@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::{Deserialize, Serialize};
+
 use crate::compiler::analyzer::type_checker::TypeChecker;
 use crate::compiler::codegen::risc_v::RiscVCodegen;
 use crate::compiler::optimizer::passes::{create_default_manager, OptimizationLevel};
@@ -93,7 +95,7 @@ pub enum SecurityLevel {
 }
 
 /// Build artifact information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildArtifact {
     /// Source file path
     pub source_path: PathBuf,
@@ -115,7 +117,7 @@ pub struct BuildArtifact {
 }
 
 /// Build status
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BuildStatus {
     /// Build pending
     Pending,
@@ -210,12 +212,12 @@ impl DependencyGraph {
     fn add_dependency(&mut self, file: &str, dependency: &str) {
         self.dependencies
             .entry(file.to_string())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(dependency.to_string());
 
         self.reverse_deps
             .entry(dependency.to_string())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(file.to_string());
     }
 
@@ -281,7 +283,7 @@ pub struct BuildSystem {
 }
 
 /// Build statistics
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct BuildStats {
     /// Total files processed
     pub files_processed: usize,
@@ -452,7 +454,7 @@ impl BuildSystem {
 
         // Collect results
         let mut results = Vec::new();
-        for (file, result) in rx {
+        for (_file, result) in rx {
             match result {
                 Ok(artifact) => {
                     self.cache.update_artifact(artifact.clone());

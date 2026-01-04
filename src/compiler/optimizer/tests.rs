@@ -4,6 +4,7 @@ mod tests {
     use crate::compiler::optimizer::eta_reduction::EtaReductionPass;
     use crate::compiler::optimizer::float_comb::FloatCombPass;
     use crate::compiler::optimizer::linearize::LinearizePass;
+    use crate::compiler::optimizer::passes::{OptimizationPass, OptimizationResult};
     use crate::compiler::optimizer::pruner::PrunePass;
     use crate::compiler::parser::ast::*;
     use crate::compiler::parser::parser::Parser;
@@ -28,7 +29,7 @@ mod tests {
     #[test]
     fn test_linearize_pass_basic() {
         let program = create_simple_program();
-        let pass = LinearizePass::new();
+        let mut pass = LinearizePass::new();
 
         let start = std::time::Instant::now();
         let result = pass.run(program);
@@ -41,7 +42,7 @@ mod tests {
     #[test]
     fn test_float_comb_pass_basic() {
         let program = create_simple_program();
-        let pass = FloatCombPass::new();
+        let mut pass = FloatCombPass::new();
 
         let start = std::time::Instant::now();
         let result = pass.run(program);
@@ -54,7 +55,7 @@ mod tests {
     #[test]
     fn test_prune_pass_basic() {
         let program = create_simple_program();
-        let pass = PrunePass::new();
+        let mut pass = PrunePass::new();
 
         let start = std::time::Instant::now();
         let result = pass.run(program);
@@ -67,7 +68,7 @@ mod tests {
     #[test]
     fn test_eta_reduction_pass_basic() {
         let program = create_simple_program();
-        let pass = EtaReductionPass::new();
+        let mut pass = EtaReductionPass::new();
 
         let start = std::time::Instant::now();
         let result = pass.run(program);
@@ -207,8 +208,8 @@ mod tests {
         // Test that passes don't interfere with each other
         let program = create_simple_program();
 
-        let pass1 = LinearizePass::new();
-        let pass2 = FloatCombPass::new();
+        let mut pass1 = LinearizePass::new();
+        let mut pass2 = FloatCombPass::new();
 
         // Run pass1
         let result1 = pass1.run(program.clone()).unwrap();

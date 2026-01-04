@@ -305,7 +305,7 @@ impl Environment {
     /// Call another contract
     pub fn call(
         &mut self,
-        address: [u8; 32],
+        _address: [u8; 32],
         value: u128,
         input: Vec<u8>,
         gas_limit: u64,
@@ -371,7 +371,7 @@ impl Environment {
     }
 
     /// Execute the current contract
-    pub fn execute(&mut self, code: &[u8]) -> Result<ExecutionResult, EnvError> {
+    pub fn execute(&mut self, _code: &[u8]) -> Result<ExecutionResult, EnvError> {
         // In a real implementation, this would use PolkaVM to execute the contract
         // For this example, we'll just return a dummy result
 

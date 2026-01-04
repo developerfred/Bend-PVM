@@ -196,7 +196,7 @@ pub fn build_metadata(
 ) -> ContractMetadata {
     // Create source metadata
     let mut source_metadata = Vec::new();
-    for (name, content) in sources {
+    for (name, _content) in sources {
         // In a real implementation, compute a proper hash
         let content_hash = format!("hash_{}", name.replace('.', "_"));
 
@@ -220,7 +220,7 @@ pub fn build_metadata(
 }
 
 /// Compute a function selector (similar to Ethereum)
-pub fn compute_function_selector(name: &str, params: &[ParameterMetadata]) -> [u8; 4] {
+pub fn compute_function_selector(name: &str, _params: &[ParameterMetadata]) -> [u8; 4] {
     // In a real implementation, this would compute a proper function selector
     // by hashing the function signature (name and parameter types)
     let mut selector = [0u8; 4];

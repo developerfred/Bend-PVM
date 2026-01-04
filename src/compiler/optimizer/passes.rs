@@ -55,7 +55,7 @@ pub trait OptimizationPass {
     fn description(&self) -> &'static str;
 
     /// Applies the optimization pass to the program
-    fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError>;
+    fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError>;
 }
 
 /// Optimization pass manager
@@ -93,7 +93,7 @@ impl OptimizationManager {
             // Add default passes here
         ];
 
-        let mut enabled_passes = HashSet::new();
+        let enabled_passes = HashSet::new();
 
         OptimizationManager {
             passes,
@@ -151,12 +151,12 @@ impl OptimizationManager {
     }
 
     /// Runs all enabled optimization passes on the program
-    pub fn optimize(&self, program: Program) -> Result<Program, OptimizationError> {
+    pub fn optimize(&mut self, program: Program) -> Result<Program, OptimizationError> {
         let mut current_program = program;
         let mut modified = false;
 
         // Run all enabled passes
-        for pass in &self.passes {
+        for pass in &mut self.passes {
             if self.enabled_passes.contains(pass.name()) {
                 let result = pass.run(current_program)?;
 
@@ -286,7 +286,7 @@ mod tests {
             fn description(&self) -> &'static str {
                 "Test pass"
             }
-            fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
+            fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError> {
                 Ok(OptimizationResult::Unchanged(program))
             }
         }
@@ -309,7 +309,7 @@ mod tests {
             fn description(&self) -> &'static str {
                 "Test pass"
             }
-            fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
+            fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError> {
                 Ok(OptimizationResult::Unchanged(program))
             }
         }
@@ -431,7 +431,7 @@ mod tests {
         let program = create_complex_program();
 
         // Test LinearizePass
-        let linearize_pass = LinearizePass::new();
+        let mut linearize_pass = LinearizePass::new();
         let start = std::time::Instant::now();
         let linearize_result = linearize_pass.run(program.clone());
         let linearize_duration = start.elapsed();
@@ -443,7 +443,7 @@ mod tests {
         );
 
         // Test PrunePass
-        let prune_pass = PrunePass::new();
+        let mut prune_pass = PrunePass::new();
         let start = std::time::Instant::now();
         let prune_result = prune_pass.run(program);
         let prune_duration = start.elapsed();
@@ -509,7 +509,7 @@ mod tests {
             fn description(&self) -> &'static str {
                 "A pass that always fails"
             }
-            fn run(&self, _program: Program) -> Result<OptimizationResult, OptimizationError> {
+            fn run(&mut self, _program: Program) -> Result<OptimizationResult, OptimizationError> {
                 Err(OptimizationError::Generic("Test failure".to_string()))
             }
         }
@@ -592,16 +592,7 @@ mod tests {
             Expr::FunctionCall { args, .. } => {
                 1 + args.iter().map(count_expr_operations).sum::<usize>()
             }
-            Expr::If {
-                condition,
-                then_branch,
-                else_branch,
-                ..
-            } => {
-                1 + count_expr_operations(condition)
-                    + count_expr_operations(then_branch)
-                    + count_expr_operations(else_branch)
-            }
+
             _ => 1,
         }
     }
