@@ -21,6 +21,14 @@ pub enum BendError {
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
 
+    /// JSON errors
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
+
+    /// Optimization errors
+    #[error("Optimization error: {0}")]
+    Optimization(#[from] crate::compiler::optimizer::passes::OptimizationError),
+
     /// Configuration errors
     #[error("Configuration error: {0}")]
     Config(String),
