@@ -650,7 +650,6 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
                 } else {
                     Some(children)
                 },
-                data: None,
                 deprecated: None,
             })
         }
@@ -674,7 +673,6 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
                 range,
                 selection_range: range,
                 children: None,
-                data: None,
                 deprecated: None,
             })
         }
@@ -698,7 +696,6 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
                 range,
                 selection_range: range,
                 children: None,
-                data: None,
                 deprecated: None,
             })
         }
@@ -722,7 +719,6 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
                 range,
                 selection_range: range,
                 children: None,
-                data: None,
                 deprecated: None,
             })
         }
@@ -746,7 +742,6 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
                 range,
                 selection_range: range,
                 children: None,
-                data: None,
                 deprecated: None,
             })
         }

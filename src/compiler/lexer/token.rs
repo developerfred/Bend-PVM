@@ -43,7 +43,7 @@ pub enum Token {
     Equal,
     Tilde,
     BackTick,
-    
+
     // Operators
     Plus,
     Minus,
@@ -67,7 +67,7 @@ pub enum Token {
     CaretEqual,
     AmpersandEqual,
     PipeEqual,
-    
+
     // Literals
     Identifier(String),
     UintLiteral(u32),  // For u24
@@ -76,7 +76,7 @@ pub enum Token {
     StringLiteral(String),
     CharLiteral(char),
     SymbolLiteral(String),
-    
+
     // Special
     EOF,
     Error(String),

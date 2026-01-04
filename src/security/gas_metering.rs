@@ -1,8 +1,7 @@
 /// Gas Metering module
-/// 
+///
 /// Provides comprehensive gas limit enforcement, tracking, and optimization
 /// to prevent DoS attacks and ensure fair resource allocation.
-
 use crate::compiler::parser::ast::*;
 use crate::security::SecurityError;
 use std::collections::{HashMap, VecDeque};
@@ -37,7 +36,7 @@ pub enum GasCost {
     Create = 20000,
     Create2 = 32000,
     SelfDestruct = 5000,
-    Invalid = 7,  // Using 7 which is not assigned to any other variant
+    Invalid = 7, // Using 7 which is not assigned to any other variant
 }
 
 /// Gas tracking entry
@@ -157,17 +156,26 @@ impl GasMeter {
     }
 
     /// Consume gas for a function call
-    pub fn consume_function_gas(&mut self, function: &str, gas_amount: u64) -> Result<(), SecurityError> {
+    pub fn consume_function_gas(
+        &mut self,
+        function: &str,
+        gas_amount: u64,
+    ) -> Result<(), SecurityError> {
         // Check function-specific gas limit
         let current_function_gas = self.function_gas_used.get(function).copied().unwrap_or(0);
         if current_function_gas + gas_amount > self.config.function_gas_limit {
-            return Err(SecurityError::GasLimitExceeded(self.config.function_gas_limit - current_function_gas));
+            return Err(SecurityError::GasLimitExceeded(
+                self.config.function_gas_limit - current_function_gas,
+            ));
         }
 
         self.consume_gas(gas_amount)?;
-        
+
         // Track function-specific gas usage
-        *self.function_gas_used.entry(function.to_string()).or_insert(0) += gas_amount;
+        *self
+            .function_gas_used
+            .entry(function.to_string())
+            .or_insert(0) += gas_amount;
 
         Ok(())
     }
@@ -181,7 +189,7 @@ impl GasMeter {
     /// Estimate gas for an operation
     pub fn estimate_gas(&self, operation: GasCost) -> u64 {
         let base_cost = operation as u64;
-        
+
         // Add complexity factor based on current gas usage
         let complexity_factor = 1.0 + (self.total_gas_used as f64 / self.gas_limit as f64);
         (base_cost as f64 * complexity_factor).round() as u64
@@ -242,7 +250,7 @@ impl GasMeter {
 
     /// Record gas usage
     pub fn record_gas_usage(&mut self, function: &str, gas_used: u64) {
-let current_time = SystemTime::now()
+        let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
@@ -272,13 +280,18 @@ let current_time = SystemTime::now()
         if self.gas_history.len() >= 2 {
             let recent_entries: Vec<_> = self.gas_history.iter().rev().take(5).collect();
             if recent_entries.len() >= 2 {
-                let avg_recent = recent_entries.iter().map(|e| e.gas_used).sum::<u64>() / recent_entries.len() as u64;
+                let avg_recent = recent_entries.iter().map(|e| e.gas_used).sum::<u64>()
+                    / recent_entries.len() as u64;
                 let current = recent_entries[0].gas_used;
-                
+
                 if current > avg_recent * 3 && avg_recent > 0 {
                     anomalies.push(GasAnomaly {
                         anomaly_type: "Gas Spike".to_string(),
-                        description: format!("Function {} uses {}x average gas", recent_entries[0].function, current / avg_recent),
+                        description: format!(
+                            "Function {} uses {}x average gas",
+                            recent_entries[0].function,
+                            current / avg_recent
+                        ),
                         severity: "HIGH".to_string(),
                     });
                 }
@@ -299,7 +312,11 @@ let current_time = SystemTime::now()
             if *gas_used > self.config.function_gas_limit / 2 {
                 anomalies.push(GasAnomaly {
                     anomaly_type: "High Function Gas".to_string(),
-                    description: format!("Function {} uses {:.1}% of function gas limit", function, (*gas_used as f64 / self.config.function_gas_limit as f64) * 100.0),
+                    description: format!(
+                        "Function {} uses {:.1}% of function gas limit",
+                        function,
+                        (*gas_used as f64 / self.config.function_gas_limit as f64) * 100.0
+                    ),
                     severity: "MEDIUM".to_string(),
                 });
             }
@@ -337,10 +354,10 @@ let current_time = SystemTime::now()
             let base_price = oracle.base_price;
             let usage_factor = self.gas_usage_percentage() / 100.0;
             let volatility_adjustment = oracle.volatility_factor * (usage_factor - 0.5);
-            
+
             let mut price = base_price as f64 * (1.0 + volatility_adjustment);
             price = price.clamp(oracle.min_price as f64, oracle.max_price as f64);
-            
+
             price.round() as u64
         } else {
             20_000_000_000 // Default 20 Gwei
@@ -370,8 +387,13 @@ pub struct GasAnomaly {
 /// Register gas metering functions in AST
 pub fn register_gas_functions() -> Vec<Definition> {
     let mut definitions = Vec::new();
-    let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
-    
+    let dummy_loc = Location {
+        line: 0,
+        column: 0,
+        start: 0,
+        end: 0,
+    };
+
     let int_type = Type::Named {
         name: "Int".to_string(),
         params: Vec::new(),
@@ -413,13 +435,11 @@ pub fn register_gas_functions() -> Vec<Definition> {
     // Estimate gas for operation
     definitions.push(Definition::FunctionDef {
         name: "GasMeter/estimate".to_string(),
-        params: vec![
-            Parameter {
-                name: "operation".to_string(),
-                ty: string_type.clone(),
-                location: dummy_loc.clone(),
-            },
-        ],
+        params: vec![Parameter {
+            name: "operation".to_string(),
+            ty: string_type.clone(),
+            location: dummy_loc.clone(),
+        }],
         return_type: Some(int_type.clone()),
         body: Block {
             statements: Vec::new(),

@@ -32,6 +32,13 @@ chacha20poly1305 = "0.10"
 getrandom = { version = "0.2", features = ["js"] }
 base64 = "0.22"
 
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "compiler_benchmarks"
+harness = false
+
 [workspace]
 members = ["tools/lsp"]
 

@@ -479,10 +479,11 @@ impl FuzzTester {
                 1 => TestInput::String(self.rng.gen::<char>().to_string()),
                 2 => TestInput::Boolean(self.rng.gen()),
                 3 => TestInput::Bytes((0..32).map(|_| self.rng.gen()).collect()),
-                4 => TestInput::Array(vec![
-                    TestInput::Integer(self.rng.gen()),
-                    TestInput::Integer(self.rng.gen()),
-                ]),
+                4 => {
+                    let val1 = self.rng.gen();
+                    let val2 = self.rng.gen();
+                    TestInput::Array(vec![TestInput::Integer(val1), TestInput::Integer(val2)])
+                }
                 5 => TestInput::Address((0..20).map(|_| self.rng.gen()).collect()),
                 _ => TestInput::Integer(0),
             })

@@ -127,7 +127,9 @@ impl ExecutionContext {
     /// Check if there's enough storage deposit for an operation
     pub fn check_storage_deposit(&self, amount: u128) -> Result<(), EnvError> {
         if self.storage_deposit_used + amount > self.storage_deposit_limit {
-            Err(EnvError::Execution("Storage deposit limit exceeded".to_string()))
+            Err(EnvError::Execution(
+                "Storage deposit limit exceeded".to_string(),
+            ))
         } else {
             Ok(())
         }
@@ -214,11 +216,11 @@ impl Environment {
     pub fn storage_get(&mut self, key: &[u8]) -> Result<Option<Vec<u8>>, EnvError> {
         // Use gas for the operation
         self.context.use_gas(200)?;
-        
+
         // Use proof size for the operation
         // Accessing storage requires proving the key, so we add the key size to proof size
         self.context.use_proof_size(key.len() as u64)?;
-        
+
         // Return the value
         Ok(self.storage.get(key).cloned())
     }
@@ -227,24 +229,25 @@ impl Environment {
     pub fn storage_set(&mut self, key: &[u8], value: &[u8]) -> Result<(), EnvError> {
         // Use gas for the operation
         self.context.use_gas(200 + value.len() as u64)?;
-        
+
         // Use proof size for the operation
-        self.context.use_proof_size((key.len() + value.len()) as u64)?;
-        
+        self.context
+            .use_proof_size((key.len() + value.len()) as u64)?;
+
         // Calculate storage deposit
         // If we're replacing an existing value, we only pay for the difference
         let old_size = self.storage.get(key).map_or(0, |v| v.len());
         let new_size = value.len();
-        
+
         if new_size > old_size {
             // More storage is used, pay for the difference
             let deposit_amount = (new_size - old_size) as u128;
             self.context.use_storage_deposit(deposit_amount)?;
         }
-        
+
         // Store the value
         self.storage.insert(key.to_vec(), value.to_vec());
-        
+
         Ok(())
     }
 
@@ -252,19 +255,22 @@ impl Environment {
     pub fn storage_clear(&mut self, key: &[u8]) -> Result<(), EnvError> {
         // Use gas for the operation
         self.context.use_gas(200)?;
-        
+
         // Use proof size for the operation
         self.context.use_proof_size(key.len() as u64)?;
-        
+
         // Refund storage deposit (in a real implementation this would go back to the caller)
         if let Some(old_value) = self.storage.get(key) {
             // This is a refund, so we don't check limits
-            self.context.storage_deposit_used = self.context.storage_deposit_used.saturating_sub(old_value.len() as u128);
+            self.context.storage_deposit_used = self
+                .context
+                .storage_deposit_used
+                .saturating_sub(old_value.len() as u128);
         }
-        
+
         // Remove the value
         self.storage.remove(key);
-        
+
         Ok(())
     }
 
@@ -274,28 +280,25 @@ impl Environment {
         if topics.len() > 4 {
             return Err(EnvError::InvalidInput("Too many event topics".to_string()));
         }
-        
+
         let mut total_size = data.len();
         for topic in &topics {
             total_size += topic.len();
         }
-        
+
         if total_size > 416 {
             return Err(EnvError::InvalidInput("Event too large".to_string()));
         }
-        
+
         // Use gas for the operation
         self.context.use_gas(100 + total_size as u64)?;
-        
+
         // Use proof size for the operation
         self.context.use_proof_size(total_size as u64)?;
-        
+
         // Emit the event
-        self.events.push(Event {
-            topics,
-            data,
-        });
-        
+        self.events.push(Event { topics, data });
+
         Ok(())
     }
 
@@ -311,42 +314,59 @@ impl Environment {
     ) -> Result<ExecutionResult, EnvError> {
         // In a real implementation, this would execute the contract at the given address
         // For this example, we'll just simulate it
-        
+
         // Use gas for the operation
         self.context.use_gas(100 + input.len() as u64)?;
-        
+
         // Use proof size for the operation
         self.context.use_proof_size(input.len() as u64)?;
-        
+
         // Check if there's enough gas for the call
         if self.context.gas_used + gas_limit > self.context.gas_limit {
             return Err(EnvError::OutOfGas);
         }
-        
+
         // Check value transfer
         if value > 0 {
-            return Err(EnvError::Call("Value transfer not supported in this example".to_string()));
+            return Err(EnvError::Call(
+                "Value transfer not supported in this example".to_string(),
+            ));
         }
-        
+
         // Simulate the call - in a real implementation, this would use PolkaVM to execute the contract
         let result = ExecutionResult::Success {
-            data: vec![1, 2, 3, 4], // Some dummy data
-            gas_used: gas_limit / 2, // Use half the provided gas
-            proof_size_used: proof_size_limit / 2, // Use half the provided proof size
+            data: vec![1, 2, 3, 4],                          // Some dummy data
+            gas_used: gas_limit / 2,                         // Use half the provided gas
+            proof_size_used: proof_size_limit / 2,           // Use half the provided proof size
             storage_deposit_used: storage_deposit_limit / 2, // Use half the provided storage deposit
         };
-        
+
         // Update gas used
         match &result {
-            ExecutionResult::Success { gas_used, proof_size_used, storage_deposit_used, .. } |
-            ExecutionResult::Failure { gas_used, proof_size_used, storage_deposit_used, .. } |
-            ExecutionResult::Revert { gas_used, proof_size_used, storage_deposit_used, .. } => {
+            ExecutionResult::Success {
+                gas_used,
+                proof_size_used,
+                storage_deposit_used,
+                ..
+            }
+            | ExecutionResult::Failure {
+                gas_used,
+                proof_size_used,
+                storage_deposit_used,
+                ..
+            }
+            | ExecutionResult::Revert {
+                gas_used,
+                proof_size_used,
+                storage_deposit_used,
+                ..
+            } => {
                 self.context.gas_used += gas_used;
                 self.context.proof_size_used += proof_size_used;
                 self.context.storage_deposit_used += storage_deposit_used;
             }
         }
-        
+
         Ok(result)
     }
 
@@ -354,7 +374,7 @@ impl Environment {
     pub fn execute(&mut self, code: &[u8]) -> Result<ExecutionResult, EnvError> {
         // In a real implementation, this would use PolkaVM to execute the contract
         // For this example, we'll just return a dummy result
-        
+
         // Simulate execution
         if self.context.input.starts_with(&[0xDE, 0xAD, 0xBE, 0xEF]) {
             // Simulate a revert

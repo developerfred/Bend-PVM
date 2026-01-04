@@ -1,8 +1,7 @@
 /// Reentrancy Guard module
-/// 
+///
 /// Provides protection against reentrancy attacks, which are a common and dangerous
 /// type of security vulnerability in smart contracts and distributed systems.
-
 use crate::compiler::parser::ast::*;
 use crate::security::SecurityError;
 use std::collections::{HashMap, HashSet};
@@ -20,7 +19,10 @@ struct CallStackEntry {
 #[derive(Debug, Clone)]
 enum GuardState {
     Unlocked,
-    Locked { lock_holder: Vec<u8>, lock_time: u64 },
+    Locked {
+        lock_holder: Vec<u8>,
+        lock_time: u64,
+    },
 }
 
 /// Reentrancy protection modes
@@ -80,7 +82,7 @@ impl ReentrancyGuard {
     /// Enter a function (check for reentrancy)
     pub fn enter_function(&mut self, function: &str) -> Result<(), SecurityError> {
         self.attempt_count += 1;
-        
+
         let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -97,14 +99,22 @@ impl ReentrancyGuard {
             }
             ProtectionMode::FunctionLevel => {
                 // Check if function is already in call stack (reentrancy)
-                if self.call_stack.iter().any(|entry| entry.function == function) {
+                if self
+                    .call_stack
+                    .iter()
+                    .any(|entry| entry.function == function)
+                {
                     return Err(SecurityError::ReentrancyDetected);
                 }
             }
             ProtectionMode::ContractLevel => {
                 // This would need contract address information
                 // For now, treat similar to function level
-                if self.call_stack.iter().any(|entry| entry.function.split('/').next() == function.split('/').next()) {
+                if self
+                    .call_stack
+                    .iter()
+                    .any(|entry| entry.function.split('/').next() == function.split('/').next())
+                {
                     return Err(SecurityError::ReentrancyDetected);
                 }
             }
@@ -120,7 +130,11 @@ impl ReentrancyGuard {
                 // Check address-based reentrancy
                 // This would need the caller's address
                 // For now, use function-level check
-                if self.call_stack.iter().any(|entry| entry.function == function) {
+                if self
+                    .call_stack
+                    .iter()
+                    .any(|entry| entry.function == function)
+                {
                     return Err(SecurityError::ReentrancyDetected);
                 }
             }
@@ -139,33 +153,54 @@ impl ReentrancyGuard {
     /// Exit a function
     pub fn exit_function(&mut self, function: &str) {
         // Remove the most recent matching entry from call stack
-        if let Some(pos) = self.call_stack.iter().rposition(|entry| entry.function == function) {
+        if let Some(pos) = self
+            .call_stack
+            .iter()
+            .rposition(|entry| entry.function == function)
+        {
             self.call_stack.remove(pos);
         }
     }
 
     /// Set caller address for current function
     pub fn set_caller(&mut self, function: &str, caller: &[u8]) {
-        if let Some(entry) = self.call_stack.iter_mut().rfind(|entry| entry.function == function) {
+        if let Some(entry) = self
+            .call_stack
+            .iter_mut()
+            .rfind(|entry| entry.function == function)
+        {
             entry.caller = caller.to_vec();
         }
     }
 
     /// Check if address has called this function recently
-    pub fn check_address_frequency(&mut self, function: &str, address: &[u8], max_frequency: u32) -> Result<(), SecurityError> {
+    pub fn check_address_frequency(
+        &mut self,
+        function: &str,
+        address: &[u8],
+        max_frequency: u32,
+    ) -> Result<(), SecurityError> {
         let key = function.to_string();
-        let address_set = self.visited_addresses.entry(key).or_insert_with(HashSet::new);
-        
+        let address_set = self
+            .visited_addresses
+            .entry(key)
+            .or_insert_with(HashSet::new);
+
         if address_set.len() >= max_frequency as usize && !address_set.contains(address) {
             return Err(SecurityError::ReentrancyDetected);
         }
-        
+
         address_set.insert(address.to_vec());
         Ok(())
     }
 
     /// Lock a function temporarily
-    pub fn lock_function(&mut self, function: &str, lock_holder: &[u8], duration: u64) -> Result<(), SecurityError> {
+    pub fn lock_function(
+        &mut self,
+        function: &str,
+        lock_holder: &[u8],
+        duration: u64,
+    ) -> Result<(), SecurityError> {
         let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -185,21 +220,29 @@ impl ReentrancyGuard {
             }
         }
 
-        self.locked_functions.insert(function.to_string(), guard_state);
+        self.locked_functions
+            .insert(function.to_string(), guard_state);
         Ok(())
     }
 
     /// Unlock a function
-    pub fn unlock_function(&mut self, function: &str, lock_holder: &[u8]) -> Result<(), SecurityError> {
+    pub fn unlock_function(
+        &mut self,
+        function: &str,
+        lock_holder: &[u8],
+    ) -> Result<(), SecurityError> {
         if let Some(guard_state) = self.locked_functions.get_mut(function) {
             match guard_state {
-                GuardState::Locked { lock_holder: holder, .. } if holder == lock_holder => {
+                GuardState::Locked {
+                    lock_holder: holder,
+                    ..
+                } if holder == lock_holder => {
                     self.locked_functions.remove(function);
                     Ok(())
                 }
                 _ => Err(SecurityError::AccessDenied(
-                    "Not the lock holder".to_string()
-                ))
+                    "Not the lock holder".to_string(),
+                )),
             }
         } else {
             Ok(())
@@ -239,7 +282,11 @@ impl ReentrancyGuard {
 
         // Check for recursive calls
         for func in functions {
-            let call_count = self.call_stack.iter().filter(|entry| &entry.function == func).count();
+            let call_count = self
+                .call_stack
+                .iter()
+                .filter(|entry| &entry.function == func)
+                .count();
             if call_count > 1 {
                 warnings.push(format!("Potential recursive call detected: {}", func));
             }
@@ -247,7 +294,10 @@ impl ReentrancyGuard {
 
         // Check for deep call stacks
         if self.call_stack.len() > 10 {
-            warnings.push(format!("Deep call stack detected: {} levels", self.call_stack.len()));
+            warnings.push(format!(
+                "Deep call stack detected: {} levels",
+                self.call_stack.len()
+            ));
         }
 
         // Check for time-based reentrancy
@@ -255,16 +305,18 @@ impl ReentrancyGuard {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
+
         let mut time_deltas = Vec::new();
         for entry in &self.call_stack {
             time_deltas.push(current_time - entry.timestamp);
         }
-        
+
         if time_deltas.len() > 1 {
             let avg_delta = time_deltas.iter().sum::<u64>() / time_deltas.len() as u64;
             if avg_delta < 1 {
-                warnings.push("Very rapid successive calls detected (potential reentrancy)".to_string());
+                warnings.push(
+                    "Very rapid successive calls detected (potential reentrancy)".to_string(),
+                );
             }
         }
 
@@ -332,8 +384,13 @@ pub struct SecurityAnalysis {
 /// Register reentrancy protection functions in AST
 pub fn register_reentrancy_functions() -> Vec<Definition> {
     let mut definitions = Vec::new();
-    let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
-    
+    let dummy_loc = Location {
+        line: 0,
+        column: 0,
+        start: 0,
+        end: 0,
+    };
+
     let string_type = Type::Named {
         name: "String".to_string(),
         params: Vec::new(),
@@ -355,13 +412,11 @@ pub fn register_reentrancy_functions() -> Vec<Definition> {
     // Check if function is reentrant-safe
     definitions.push(Definition::FunctionDef {
         name: "ReentrancyGuard/checkSafe".to_string(),
-        params: vec![
-            Parameter {
-                name: "function".to_string(),
-                ty: string_type.clone(),
-                location: dummy_loc.clone(),
-            },
-        ],
+        params: vec![Parameter {
+            name: "function".to_string(),
+            ty: string_type.clone(),
+            location: dummy_loc.clone(),
+        }],
         return_type: Some(bool_type.clone()),
         body: Block {
             statements: Vec::new(),

@@ -1,5 +1,9 @@
+pub mod access_control;
+pub mod fuzz_testing;
+pub mod gas_metering;
+pub mod reentrancy_guard;
 /// Bend-PVM Security Framework
-/// 
+///
 /// This module provides comprehensive security features for the Bend-PVM ecosystem:
 /// - SafeMath: Overflow/underflow protection for arithmetic operations
 /// - Input Validation: Sanitization and validation of user inputs
@@ -9,15 +13,10 @@
 /// - Security Scanner: Vulnerability detection and analysis
 /// - Static Analysis: Code security analysis
 /// - Fuzz Testing: Automated security testing framework
-
 pub mod safe_math;
-pub mod validation;
-pub mod access_control;
-pub mod reentrancy_guard;
-pub mod gas_metering;
 pub mod security_scanner;
 pub mod static_analysis;
-pub mod fuzz_testing;
+pub mod validation;
 
 use crate::compiler::parser::ast::*;
 use crate::runtime::env::Environment;
@@ -39,19 +38,19 @@ pub enum SecuritySeverity {
 pub enum SecurityError {
     #[error("Access denied: {0}")]
     AccessDenied(String),
-    
+
     #[error("Reentrancy detected")]
     ReentrancyDetected,
-    
+
     #[error("Gas limit exceeded: {0}")]
     GasLimitExceeded(u64),
-    
+
     #[error("Input validation failed: {0}")]
     ValidationFailed(String),
-    
+
     #[error("Security violation: {0}")]
     SecurityViolation(String),
-    
+
     #[error("Static analysis error: {0}")]
     StaticAnalysisError(String),
 }
@@ -135,11 +134,17 @@ impl SecurityManager {
     }
 
     /// Check access permissions
-    pub fn check_access(&mut self, caller: &[u8], resource: &str, operation: &str) -> Result<(), SecurityError> {
+    pub fn check_access(
+        &mut self,
+        caller: &[u8],
+        resource: &str,
+        operation: &str,
+    ) -> Result<(), SecurityError> {
         if !self.config.enable_access_control {
             return Ok(());
         }
-        self.access_control.check_permission(caller, resource, operation)
+        self.access_control
+            .check_permission(caller, resource, operation)
     }
 
     /// Enter secure execution context
@@ -210,15 +215,15 @@ pub fn init_security(env: &mut Environment, config: SecurityConfig) -> Result<()
 /// Register security modules
 pub fn register_security_modules() -> Vec<Definition> {
     let mut definitions = Vec::new();
-    
+
     // Register safe math operations
     definitions.extend(safe_math::register_safe_math());
-    
+
     // Register validation functions
     definitions.extend(validation::register_validation_functions());
-    
+
     // Register access control functions
     definitions.extend(access_control::register_access_control_functions());
-    
+
     definitions
 }

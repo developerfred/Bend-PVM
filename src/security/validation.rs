@@ -1,12 +1,11 @@
 /// Input Validation module
-/// 
+///
 /// Provides comprehensive input sanitization and validation to prevent
 /// injection attacks, buffer overflows, and other input-based security vulnerabilities.
-
 use crate::compiler::parser::ast::*;
 use crate::security::SecurityError;
-use std::collections::HashSet;
 use regex::Regex;
+use std::collections::HashSet;
 
 /// Input validation rules
 #[derive(Debug, Clone)]
@@ -39,7 +38,7 @@ impl InputValidator {
             validation_count: 0,
             failure_count: 0,
         };
-        
+
         validator.add_default_rules();
         validator
     }
@@ -71,13 +70,19 @@ impl InputValidator {
     }
 
     /// Validate a single input
-    pub fn validate_input(&mut self, input: &str, rule_name: &str) -> Result<String, SecurityError> {
+    pub fn validate_input(
+        &mut self,
+        input: &str,
+        rule_name: &str,
+    ) -> Result<String, SecurityError> {
         self.validation_count += 1;
 
         // Simplified validation for now
         if input.len() > 1000 {
             self.failure_count += 1;
-            return Err(SecurityError::ValidationFailed("Input too long".to_string()));
+            return Err(SecurityError::ValidationFailed(
+                "Input too long".to_string(),
+            ));
         }
 
         Ok(input.to_string())

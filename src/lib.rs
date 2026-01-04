@@ -1,38 +1,42 @@
+pub mod build;
+pub mod error;
+pub mod ffi;
+
 pub mod compiler {
     pub mod lexer {
-        pub mod token;
         pub mod lexer;
+        pub mod token;
     }
-    
+
     pub mod parser {
         pub mod ast;
         pub mod parser;
     }
-    
+
     pub mod analyzer {
         pub mod type_checker;
     }
-    
+
     pub mod optimizer {
-        pub mod passes;
-        pub mod linearize;
-        pub mod float_comb;
-        pub mod pruner;
         pub mod eta_reduction;
+        pub mod float_comb;
+        pub mod linearize;
+        pub mod passes;
+        pub mod pruner;
     }
-    
+
     pub mod codegen {
         pub mod ir;
-        pub mod risc_v;
         pub mod metadata;
+        pub mod risc_v;
     }
-    
+
     pub mod polkavm {
-        pub mod bridge;
         pub mod abi;
+        pub mod bridge;
         pub mod host;
     }
-    
+
     pub mod module;
 }
 
@@ -42,41 +46,41 @@ pub mod security;
 
 pub mod runtime {
     pub mod env;
-    pub mod metering;
     pub mod memory;
+    pub mod metering;
     pub mod storage;
 }
 
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
-use compiler::lexer::lexer::BendLexer;
-use compiler::parser::parser::Parser;
 use compiler::analyzer::type_checker::TypeChecker;
 use compiler::codegen::risc_v::RiscVCodegen;
-use compiler::polkavm::bridge::{PolkaVMModule, compile_to_polkavm};
+use compiler::lexer::lexer::BendLexer;
+use compiler::parser::parser::Parser;
+use compiler::polkavm::bridge::{compile_to_polkavm, PolkaVMModule};
 
-use security::{SecurityManager, SecurityConfig};
+use security::{SecurityConfig, SecurityManager};
 
 #[derive(Error, Debug)]
 pub enum CompilerError {
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
-    
+
     #[error("Parse error: {0}")]
     Parse(String),
-    
+
     #[error("Type error: {0}")]
     Type(String),
-    
+
     #[error("Codegen error: {0}")]
     Codegen(String),
-    
+
     #[error("PolkaVM error: {0}")]
     PolkaVM(String),
-    
+
     #[error("Security error: {0}")]
     Security(String),
 }
@@ -85,34 +89,34 @@ pub enum CompilerError {
 pub struct CompilerOptions {
     /// Output file path
     pub output: Option<PathBuf>,
-    
+
     /// Whether to optimize the code
     pub optimize: bool,
-    
+
     /// Whether to generate debug information
     pub debug: bool,
-    
+
     /// Whether to perform type checking
     pub type_check: bool,
-    
+
     /// Whether to output assembly
     pub assembly: bool,
-    
+
     /// Whether to output metadata
     pub metadata: bool,
-    
+
     /// Whether to output ABI
     pub abi: bool,
-    
+
     /// Whether to enable security scanning
     pub security_scan: bool,
-    
+
     /// Whether to enable static analysis
     pub static_analysis: bool,
-    
+
     /// Whether to enable fuzz testing
     pub fuzz_testing: bool,
-    
+
     /// Security level (0=None, 1=Basic, 2=Enhanced, 3=Maximum)
     pub security_level: u8,
 }
@@ -136,25 +140,30 @@ impl Default for CompilerOptions {
 }
 
 /// Compile a Bend contract
-pub fn compile<P: AsRef<Path>>(file_path: P, options: CompilerOptions) -> Result<(), CompilerError> {
+pub fn compile<P: AsRef<Path>>(
+    file_path: P,
+    options: CompilerOptions,
+) -> Result<(), CompilerError> {
     // Read the source file
     let source = fs::read_to_string(file_path.as_ref())?;
-    
+
     // Lex the source
     let mut lexer = BendLexer::new(&source);
-    
+
     // Parse the source
     let mut parser = Parser::new(&source);
-    let program = parser.parse_program()
+    let program = parser
+        .parse_program()
         .map_err(|e| CompilerError::Parse(e.to_string()))?;
-    
+
     // Type check the program (if enabled)
     if options.type_check {
         let mut type_checker = TypeChecker::new();
-        type_checker.check_program(&program)
+        type_checker
+            .check_program(&program)
             .map_err(|e| CompilerError::Type(e.to_string()))?;
     }
-    
+
     // Security validation (if enabled)
     if options.security_level > 0 {
         let security_config = SecurityConfig {
@@ -166,22 +175,24 @@ pub fn compile<P: AsRef<Path>>(file_path: P, options: CompilerOptions) -> Result
             enable_static_analysis: options.static_analysis,
             enable_fuzz_testing: options.fuzz_testing,
         };
-        
+
         let mut security_manager = SecurityManager::new(security_config);
-        security_manager.validate_program(&program)
+        security_manager
+            .validate_program(&program)
             .map_err(|e| CompilerError::Security(e.to_string()))?;
     }
-    
+
     // Generate code
     let mut codegen = RiscVCodegen::new();
-    let instructions = codegen.generate(&program)
+    let instructions = codegen
+        .generate(&program)
         .map_err(|e| CompilerError::Codegen(e.to_string()))?;
-    
+
     // Compile to PolkaVM
     let output_path = options.output.as_ref().map(|p| p.as_path());
     let module = compile_to_polkavm(&instructions, output_path)
         .map_err(|e| CompilerError::PolkaVM(e.to_string()))?;
-    
+
     // Output additional files if requested
     if let Some(output_path) = output_path {
         if options.assembly {
@@ -189,7 +200,7 @@ pub fn compile<P: AsRef<Path>>(file_path: P, options: CompilerOptions) -> Result
             let asm_path = output_path.with_extension("s");
             fs::write(&asm_path, &module.assembly)?;
         }
-        
+
         if options.metadata {
             // Generate and write metadata to file
             let metadata_path = output_path.with_extension("metadata.json");
@@ -197,7 +208,7 @@ pub fn compile<P: AsRef<Path>>(file_path: P, options: CompilerOptions) -> Result
             let metadata = "{\"name\": \"dummy_metadata\"}";
             fs::write(&metadata_path, metadata)?;
         }
-        
+
         if options.abi {
             // Generate and write ABI to file
             let abi_path = output_path.with_extension("abi.json");
@@ -206,7 +217,7 @@ pub fn compile<P: AsRef<Path>>(file_path: P, options: CompilerOptions) -> Result
             fs::write(&abi_path, abi)?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -214,29 +225,32 @@ pub fn compile<P: AsRef<Path>>(file_path: P, options: CompilerOptions) -> Result
 pub fn compile_from_source(source: &str, options: CompilerOptions) -> Result<(), CompilerError> {
     // Lex the source
     let mut lexer = BendLexer::new(source);
-    
+
     // Parse the source
     let mut parser = Parser::new(source);
-    let program = parser.parse_program()
+    let program = parser
+        .parse_program()
         .map_err(|e| CompilerError::Parse(e.to_string()))?;
-    
+
     // Type check the program (if enabled)
     if options.type_check {
         let mut type_checker = TypeChecker::new();
-        type_checker.check_program(&program)
+        type_checker
+            .check_program(&program)
             .map_err(|e| CompilerError::Type(e.to_string()))?;
     }
-    
+
     // Generate code
     let mut codegen = RiscVCodegen::new();
-    let instructions = codegen.generate(&program)
+    let instructions = codegen
+        .generate(&program)
         .map_err(|e| CompilerError::Codegen(e.to_string()))?;
-    
+
     // Compile to PolkaVM
     let output_path = options.output.as_ref().map(|p| p.as_path());
     let module = compile_to_polkavm(&instructions, output_path)
         .map_err(|e| CompilerError::PolkaVM(e.to_string()))?;
-    
+
     // Output additional files if requested
     if let Some(output_path) = output_path {
         if options.assembly {
@@ -244,7 +258,7 @@ pub fn compile_from_source(source: &str, options: CompilerOptions) -> Result<(),
             let asm_path = output_path.with_extension("s");
             fs::write(&asm_path, &module.assembly)?;
         }
-        
+
         if options.metadata {
             // Generate and write metadata to file
             let metadata_path = output_path.with_extension("metadata.json");
@@ -252,7 +266,7 @@ pub fn compile_from_source(source: &str, options: CompilerOptions) -> Result<(),
             let metadata = "{\"name\": \"dummy_metadata\"}";
             fs::write(&metadata_path, metadata)?;
         }
-        
+
         if options.abi {
             // Generate and write ABI to file
             let abi_path = output_path.with_extension("abi.json");
@@ -261,7 +275,7 @@ pub fn compile_from_source(source: &str, options: CompilerOptions) -> Result<(),
             fs::write(&abi_path, abi)?;
         }
     }
-    
+
     Ok(())
 }
 

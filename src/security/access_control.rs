@@ -1,8 +1,7 @@
 /// Access Control module - Role-Based Access Control (RBAC)
-/// 
+///
 /// Provides comprehensive access control mechanisms including role-based permissions,
 /// resource protection, and principal authentication for secure operations.
-
 use crate::compiler::parser::ast::*;
 use crate::security::SecurityError;
 use std::collections::HashMap;
@@ -58,7 +57,7 @@ impl AccessControl {
             entries: HashMap::new(),
             current_principal: None,
         };
-        
+
         access_control.initialize_default_roles();
         access_control
     }
@@ -76,22 +75,28 @@ impl AccessControl {
         admin_permissions.insert(Permission::AccessStorage);
         admin_permissions.insert(Permission::ModifyState);
 
-        self.roles.insert("admin".to_string(), Role {
-            name: "admin".to_string(),
-            permissions: admin_permissions,
-            members: HashSet::new(),
-        });
+        self.roles.insert(
+            "admin".to_string(),
+            Role {
+                name: "admin".to_string(),
+                permissions: admin_permissions,
+                members: HashSet::new(),
+            },
+        );
 
         // User role with limited permissions
         let mut user_permissions = HashSet::new();
         user_permissions.insert(Permission::Read);
         user_permissions.insert(Permission::Execute);
 
-        self.roles.insert("user".to_string(), Role {
-            name: "user".to_string(),
-            permissions: user_permissions,
-            members: HashSet::new(),
-        });
+        self.roles.insert(
+            "user".to_string(),
+            Role {
+                name: "user".to_string(),
+                permissions: user_permissions,
+                members: HashSet::new(),
+            },
+        );
 
         // Deployer role
         let mut deployer_permissions = HashSet::new();
@@ -100,11 +105,14 @@ impl AccessControl {
         deployer_permissions.insert(Permission::Deploy);
         deployer_permissions.insert(Permission::CallExternal);
 
-        self.roles.insert("deployer".to_string(), Role {
-            name: "deployer".to_string(),
-            permissions: deployer_permissions,
-            members: HashSet::new(),
-        });
+        self.roles.insert(
+            "deployer".to_string(),
+            Role {
+                name: "deployer".to_string(),
+                permissions: deployer_permissions,
+                members: HashSet::new(),
+            },
+        );
     }
 
     /// Set the current principal (caller)
@@ -118,60 +126,96 @@ impl AccessControl {
     }
 
     /// Create a new role
-    pub fn create_role(&mut self, name: &str, permissions: HashSet<Permission>) -> Result<(), SecurityError> {
+    pub fn create_role(
+        &mut self,
+        name: &str,
+        permissions: HashSet<Permission>,
+    ) -> Result<(), SecurityError> {
         if self.roles.contains_key(name) {
-            return Err(SecurityError::AccessDenied(format!("Role '{}' already exists", name)));
+            return Err(SecurityError::AccessDenied(format!(
+                "Role '{}' already exists",
+                name
+            )));
         }
 
-        self.roles.insert(name.to_string(), Role {
-            name: name.to_string(),
-            permissions,
-            members: HashSet::new(),
-        });
+        self.roles.insert(
+            name.to_string(),
+            Role {
+                name: name.to_string(),
+                permissions,
+                members: HashSet::new(),
+            },
+        );
 
         Ok(())
     }
 
     /// Add a principal to a role
-    pub fn add_role_member(&mut self, role_name: &str, principal: &[u8]) -> Result<(), SecurityError> {
-        let role = self.roles.get_mut(role_name)
-            .ok_or_else(|| SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name)))?;
+    pub fn add_role_member(
+        &mut self,
+        role_name: &str,
+        principal: &[u8],
+    ) -> Result<(), SecurityError> {
+        let role = self.roles.get_mut(role_name).ok_or_else(|| {
+            SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name))
+        })?;
 
         role.members.insert(principal.to_vec());
         Ok(())
     }
 
     /// Remove a principal from a role
-    pub fn remove_role_member(&mut self, role_name: &str, principal: &[u8]) -> Result<(), SecurityError> {
-        let role = self.roles.get_mut(role_name)
-            .ok_or_else(|| SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name)))?;
+    pub fn remove_role_member(
+        &mut self,
+        role_name: &str,
+        principal: &[u8],
+    ) -> Result<(), SecurityError> {
+        let role = self.roles.get_mut(role_name).ok_or_else(|| {
+            SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name))
+        })?;
 
         role.members.remove(principal);
         Ok(())
     }
 
     /// Grant permission to a role for a resource
-    pub fn grant_permission(&mut self, role_name: &str, resource: &str, permission: Permission) -> Result<(), SecurityError> {
-        let role = self.roles.get_mut(role_name)
-            .ok_or_else(|| SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name)))?;
+    pub fn grant_permission(
+        &mut self,
+        role_name: &str,
+        resource: &str,
+        permission: Permission,
+    ) -> Result<(), SecurityError> {
+        let role = self.roles.get_mut(role_name).ok_or_else(|| {
+            SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name))
+        })?;
 
         role.permissions.insert(permission.clone());
 
         // Also create/update access control entry
         let key = format!("{}:{}", resource, role_name);
-        self.entries.entry(key).or_insert_with(|| AccessControlEntry {
-            principal: vec![], // Will be resolved at runtime
-            resource: resource.to_string(),
-            permissions: HashSet::new(),
-        }).permissions.insert(permission);
+        self.entries
+            .entry(key)
+            .or_insert_with(|| AccessControlEntry {
+                principal: vec![], // Will be resolved at runtime
+                resource: resource.to_string(),
+                permissions: HashSet::new(),
+            })
+            .permissions
+            .insert(permission);
 
         Ok(())
     }
 
     /// Revoke permission from a role for a resource
-    pub fn revoke_permission(&mut self, role_name: &str, resource: &str, permission: &Permission) -> Result<(), SecurityError> {
-        let role = self.roles.get_mut(role_name)
-            .ok_or_else(|| SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name)))?;
+    pub fn revoke_permission(
+        &mut self,
+        role_name: &str,
+        resource: &str,
+        permission: &Permission,
+    ) -> Result<(), SecurityError> {
+        let role = self.roles.get_mut(role_name).ok_or_else(|| {
+            SecurityError::AccessDenied(format!("Role '{}' does not exist", role_name))
+        })?;
 
         role.permissions.remove(permission);
 
@@ -184,7 +228,12 @@ impl AccessControl {
     }
 
     /// Check if current principal has permission for a resource
-    pub fn check_permission(&self, principal: &[u8], resource: &str, operation: &str) -> Result<(), SecurityError> {
+    pub fn check_permission(
+        &self,
+        principal: &[u8],
+        resource: &str,
+        operation: &str,
+    ) -> Result<(), SecurityError> {
         let permission = self.parse_operation(operation)?;
 
         // Check if principal has direct access entry
@@ -218,11 +267,17 @@ impl AccessControl {
     }
 
     /// Check if current principal has permission for a resource (using current principal)
-    pub fn check_current_permission(&self, resource: &str, operation: &str) -> Result<(), SecurityError> {
+    pub fn check_current_permission(
+        &self,
+        resource: &str,
+        operation: &str,
+    ) -> Result<(), SecurityError> {
         if let Some(principal) = &self.current_principal {
             self.check_permission(principal, resource, operation)
         } else {
-            Err(SecurityError::AccessDenied("No current principal set".to_string()))
+            Err(SecurityError::AccessDenied(
+                "No current principal set".to_string(),
+            ))
         }
     }
 
@@ -237,7 +292,10 @@ impl AccessControl {
             "external_call" | "external" => Ok(Permission::CallExternal),
             "storage" | "access_storage" => Ok(Permission::AccessStorage),
             "state" | "modify_state" => Ok(Permission::ModifyState),
-            _ => Err(SecurityError::AccessDenied(format!("Unknown operation: {}", operation))),
+            _ => Err(SecurityError::AccessDenied(format!(
+                "Unknown operation: {}",
+                operation
+            ))),
         }
     }
 
@@ -253,28 +311,40 @@ impl AccessControl {
     /// Get all permissions for a principal
     pub fn get_principal_permissions(&self, principal: &[u8]) -> HashSet<Permission> {
         let mut permissions = HashSet::new();
-        
+
         for role in self.roles.values() {
             if role.members.contains(principal) {
                 permissions.extend(role.permissions.clone());
             }
         }
-        
+
         permissions
     }
 
     /// Create a resource-specific access control entry
-    pub fn create_resource_entry(&mut self, resource: &str, principal: &[u8], permissions: HashSet<Permission>) {
+    pub fn create_resource_entry(
+        &mut self,
+        resource: &str,
+        principal: &[u8],
+        permissions: HashSet<Permission>,
+    ) {
         let key = format!("direct:{}:{}", principal.len(), resource);
-        self.entries.insert(key, AccessControlEntry {
-            principal: principal.to_vec(),
-            resource: resource.to_string(),
-            permissions,
-        });
+        self.entries.insert(
+            key,
+            AccessControlEntry {
+                principal: principal.to_vec(),
+                resource: resource.to_string(),
+                permissions,
+            },
+        );
     }
 
     /// Remove a resource-specific access control entry
-    pub fn remove_resource_entry(&mut self, resource: &str, principal: &[u8]) -> Result<(), SecurityError> {
+    pub fn remove_resource_entry(
+        &mut self,
+        resource: &str,
+        principal: &[u8],
+    ) -> Result<(), SecurityError> {
         let key = format!("direct:{}:{}", principal.len(), resource);
         if self.entries.remove(&key).is_some() {
             Ok(())
@@ -313,7 +383,7 @@ impl AccessControl {
             if !key.starts_with("direct:") {
                 continue; // Skip role-based entries
             }
-            
+
             if !entry.permissions.is_empty() {
                 // This is a valid entry
                 continue;
@@ -327,8 +397,13 @@ impl AccessControl {
 /// Register access control functions in AST
 pub fn register_access_control_functions() -> Vec<Definition> {
     let mut definitions = Vec::new();
-    let dummy_loc = Location { line: 0, column: 0, start: 0, end: 0 };
-    
+    let dummy_loc = Location {
+        line: 0,
+        column: 0,
+        start: 0,
+        end: 0,
+    };
+
     let address_type = Type::Named {
         name: "Address".to_string(),
         params: Vec::new(),
@@ -379,13 +454,11 @@ pub fn register_access_control_functions() -> Vec<Definition> {
     // Get principal roles
     definitions.push(Definition::FunctionDef {
         name: "AccessControl/getRoles".to_string(),
-        params: vec![
-            Parameter {
-                name: "principal".to_string(),
-                ty: address_type.clone(),
-                location: dummy_loc.clone(),
-            },
-        ],
+        params: vec![Parameter {
+            name: "principal".to_string(),
+            ty: address_type.clone(),
+            location: dummy_loc.clone(),
+        }],
         return_type: Some(Type::Tuple {
             elements: vec![string_type.clone()],
             location: dummy_loc.clone(),
