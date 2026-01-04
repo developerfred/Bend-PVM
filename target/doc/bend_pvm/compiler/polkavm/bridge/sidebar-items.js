@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["PolkaVMError"],"fn":["compile_to_polkavm"],"struct":["PolkaVMModule"]};

@@ -32,7 +32,13 @@ pub mod compiler {
         pub mod abi;
         pub mod host;
     }
+    
+    pub mod module;
 }
+
+pub mod stdlib;
+
+pub mod security;
 
 pub mod runtime {
     pub mod env;
@@ -52,6 +58,8 @@ use compiler::analyzer::type_checker::TypeChecker;
 use compiler::codegen::risc_v::RiscVCodegen;
 use compiler::polkavm::bridge::{PolkaVMModule, compile_to_polkavm};
 
+use security::{SecurityManager, SecurityConfig};
+
 #[derive(Error, Debug)]
 pub enum CompilerError {
     #[error("IO error: {0}")]
@@ -68,6 +76,9 @@ pub enum CompilerError {
     
     #[error("PolkaVM error: {0}")]
     PolkaVM(String),
+    
+    #[error("Security error: {0}")]
+    Security(String),
 }
 
 /// Options for the compiler
@@ -92,6 +103,18 @@ pub struct CompilerOptions {
     
     /// Whether to output ABI
     pub abi: bool,
+    
+    /// Whether to enable security scanning
+    pub security_scan: bool,
+    
+    /// Whether to enable static analysis
+    pub static_analysis: bool,
+    
+    /// Whether to enable fuzz testing
+    pub fuzz_testing: bool,
+    
+    /// Security level (0=None, 1=Basic, 2=Enhanced, 3=Maximum)
+    pub security_level: u8,
 }
 
 impl Default for CompilerOptions {
@@ -104,6 +127,10 @@ impl Default for CompilerOptions {
             assembly: false,
             metadata: true,
             abi: true,
+            security_scan: true,
+            static_analysis: true,
+            fuzz_testing: false, // Disabled by default for performance
+            security_level: 2,   // Enhanced security by default
         }
     }
 }
@@ -126,6 +153,23 @@ pub fn compile<P: AsRef<Path>>(file_path: P, options: CompilerOptions) -> Result
         let mut type_checker = TypeChecker::new();
         type_checker.check_program(&program)
             .map_err(|e| CompilerError::Type(e.to_string()))?;
+    }
+    
+    // Security validation (if enabled)
+    if options.security_level > 0 {
+        let security_config = SecurityConfig {
+            gas_limit: 10_000_000,
+            max_call_depth: 100,
+            enable_access_control: options.security_level >= 1,
+            enable_reentrancy_guard: options.security_level >= 2,
+            enable_input_validation: options.security_level >= 1,
+            enable_static_analysis: options.static_analysis,
+            enable_fuzz_testing: options.fuzz_testing,
+        };
+        
+        let mut security_manager = SecurityManager::new(security_config);
+        security_manager.validate_program(&program)
+            .map_err(|e| CompilerError::Security(e.to_string()))?;
     }
     
     // Generate code

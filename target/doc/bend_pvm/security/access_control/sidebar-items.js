@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Permission"],"fn":["register_access_control_functions"],"struct":["AccessControl","AccessControlEntry","Role"]};

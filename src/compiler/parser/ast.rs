@@ -12,9 +12,14 @@ pub struct Location {
 impl Location {
     /// Create a new location with the same start and end position
     pub fn new(line: usize, column: usize, start: usize, end: usize) -> Self {
-        Location { line, column, start, end }
+        Location {
+            line,
+            column,
+            start,
+            end,
+        }
     }
-    
+
     /// Create a location that spans from the start of one location to the end of another
     pub fn span(start: &Location, end: &Location) -> Self {
         Location {
@@ -77,6 +82,18 @@ pub enum Definition {
         name: String,
         type_params: Vec<String>,
         fields: Vec<Field>,
+        location: Location,
+    },
+    TypeAlias {
+        name: String,
+        type_params: Vec<String>,
+        target_type: Type,
+        location: Location,
+    },
+    Module {
+        name: String,
+        definitions: Vec<Definition>,
+        exports: Vec<String>,
         location: Location,
     },
 }
@@ -144,6 +161,29 @@ pub enum Type {
     Unknown {
         location: Location,
     },
+    Generic {
+        name: String,
+        bounds: Vec<TypeBound>,
+        location: Location,
+    },
+    Constrained {
+        base: Box<Type>,
+        bounds: Vec<TypeBound>,
+        location: Location,
+    },
+    Effect {
+        input: Box<Type>,
+        output: Box<Type>,
+        location: Location,
+    },
+}
+
+/// Represents a type bound for generics
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeBound {
+    pub trait_name: String,
+    pub args: Vec<Type>,
+    location: Location,
 }
 
 /// Represents a block of statements
@@ -356,9 +396,9 @@ pub enum Expr {
 /// Represents a literal value
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralKind {
-    Uint(u32),    // For u24
-    Int(i32),     // For i24
-    Float(f32),   // For f24
+    Uint(u32),  // For u24
+    Int(i32),   // For i24
+    Float(f32), // For f24
     String(String),
     Char(char),
     Symbol(String),
@@ -397,6 +437,8 @@ impl LocationProvider for Definition {
             Definition::FunctionDef { location, .. } => location,
             Definition::TypeDef { location, .. } => location,
             Definition::ObjectDef { location, .. } => location,
+            Definition::TypeAlias { location, .. } => location,
+            Definition::Module { location, .. } => location,
         }
     }
 }
@@ -437,8 +479,8 @@ impl LocationProvider for Statement {
             Statement::Bend { location, .. } => location,
             Statement::Open { location, .. } => location,
             Statement::With { location, .. } => location,
-             Statement::LocalDef { location, .. } => location,
-             Statement::Expr { location, .. } => location,
+            Statement::LocalDef { location, .. } => location,
+            Statement::Expr { location, .. } => location,
         }
     }
 }
@@ -464,3 +506,311 @@ impl<T: LocationProvider> LocationProvider for std::rc::Rc<T> {
     }
 }
 
+/// AST visitor trait for traversing the AST
+pub trait AstVisitor {
+    type Output;
+
+    fn visit_program(&mut self, program: &Program) -> Self::Output;
+    fn visit_definition(&mut self, definition: &Definition) -> Self::Output;
+    fn visit_statement(&mut self, statement: &Statement) -> Self::Output;
+    fn visit_expression(&mut self, expression: &Expr) -> Self::Output;
+    fn visit_pattern(&mut self, pattern: &Pattern) -> Self::Output;
+    fn visit_type(&mut self, type_: &Type) -> Self::Output;
+}
+
+/// Basic AST visitor implementation
+pub struct BasicAstVisitor;
+
+impl BasicAstVisitor {
+    pub fn new() -> Self {
+        BasicAstVisitor
+    }
+}
+
+impl AstVisitor for BasicAstVisitor {
+    type Output = ();
+
+    fn visit_program(&mut self, _program: &Program) {}
+    fn visit_definition(&mut self, _definition: &Definition) {}
+    fn visit_statement(&mut self, _statement: &Statement) {}
+    fn visit_expression(&mut self, _expression: &Expr) {}
+    fn visit_pattern(&mut self, _pattern: &Pattern) {}
+    fn visit_type(&mut self, _type_: &Type) {}
+}
+
+/// AST validation errors
+#[derive(Debug, Clone, PartialEq)]
+pub enum AstValidationError {
+    DuplicateDefinition {
+        name: String,
+        location: Location,
+    },
+    UndefinedVariable {
+        name: String,
+        location: Location,
+    },
+    TypeMismatch {
+        expected: Type,
+        found: Type,
+        location: Location,
+    },
+    PatternMismatch {
+        pattern: Pattern,
+        value: Expr,
+        location: Location,
+    },
+    InvalidRecursion {
+        location: Location,
+    },
+    DuplicateField {
+        name: String,
+        location: Location,
+    },
+    MissingField {
+        name: String,
+        location: Location,
+    },
+}
+
+/// AST validator
+pub struct AstValidator;
+
+impl AstValidator {
+    pub fn new() -> Self {
+        AstValidator
+    }
+
+    pub fn validate(&self, program: &Program) -> Result<(), Vec<AstValidationError>> {
+        let mut errors = Vec::new();
+        self.validate_program(program, &mut errors);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn validate_program(&self, program: &Program, errors: &mut Vec<AstValidationError>) {
+        let mut definitions = std::collections::HashSet::new();
+
+        for def in &program.definitions {
+            self.validate_definition(def, &mut definitions, errors);
+        }
+    }
+
+    fn validate_definition(
+        &self,
+        def: &Definition,
+        _definitions: &mut std::collections::HashSet<String>,
+        errors: &mut Vec<AstValidationError>,
+    ) {
+        match def {
+            Definition::FunctionDef {
+                name,
+                body,
+                location,
+                ..
+            } => {
+                self.validate_block(body, errors);
+            }
+            Definition::TypeDef {
+                variants, location, ..
+            } => {
+                let mut variant_names = std::collections::HashSet::new();
+                for variant in variants {
+                    if !variant_names.insert(variant.name.clone()) {
+                        errors.push(AstValidationError::DuplicateDefinition {
+                            name: variant.name.clone(),
+                            location: variant.location.clone(),
+                        });
+                    }
+                }
+            }
+            Definition::ObjectDef {
+                fields, location, ..
+            } => {
+                let mut field_names = std::collections::HashSet::new();
+                for field in fields {
+                    if !field_names.insert(field.name.clone()) {
+                        errors.push(AstValidationError::DuplicateField {
+                            name: field.name.clone(),
+                            location: field.location.clone(),
+                        });
+                    }
+                }
+            }
+            Definition::TypeAlias {
+                target_type,
+                location,
+                ..
+            } => {
+                self.validate_type(target_type, errors);
+            }
+            Definition::Module {
+                definitions,
+                location,
+                ..
+            } => {
+                let mut def_names = std::collections::HashSet::new();
+                for def in definitions {
+                    let def_name = match def {
+                        Definition::FunctionDef { name, .. } => name.clone(),
+                        Definition::TypeDef { name, .. } => name.clone(),
+                        Definition::ObjectDef { name, .. } => name.clone(),
+                        Definition::TypeAlias { name, .. } => name.clone(),
+                        Definition::Module { .. } => continue,
+                    };
+                    if !def_names.insert(def_name.clone()) {
+                        errors.push(AstValidationError::DuplicateDefinition {
+                            name: def_name,
+                            location: def.location().clone(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    fn validate_block(&self, block: &Block, errors: &mut Vec<AstValidationError>) {
+        for stmt in &block.statements {
+            self.validate_statement(stmt, errors);
+        }
+    }
+
+    fn validate_statement(&self, stmt: &Statement, errors: &mut Vec<AstValidationError>) {
+        match stmt {
+            Statement::Assignment {
+                pattern: _,
+                value,
+                location: _,
+            } => {
+                self.validate_expression(value, errors);
+            }
+            Statement::Use {
+                value, location: _, ..
+            } => {
+                self.validate_expression(value, errors);
+            }
+            Statement::Return { value, location: _ } => {
+                self.validate_expression(value, errors);
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+                location: _,
+            } => {
+                self.validate_expression(condition, errors);
+                self.validate_block(then_branch, errors);
+                self.validate_block(else_branch, errors);
+            }
+            Statement::Match {
+                value,
+                cases,
+                location: _,
+            } => {
+                self.validate_expression(value, errors);
+                for case in cases {
+                    self.validate_block(&case.body, errors);
+                }
+            }
+            Statement::Bend {
+                initial_states,
+                condition,
+                body,
+                else_body,
+                location: _,
+            } => {
+                for (_, expr) in initial_states {
+                    self.validate_expression(expr, errors);
+                }
+                self.validate_expression(condition, errors);
+                self.validate_block(body, errors);
+                if let Some(else_b) = else_body {
+                    self.validate_block(else_b, errors);
+                }
+            }
+            Statement::With {
+                body, location: _, ..
+            } => {
+                self.validate_block(body, errors);
+            }
+            Statement::LocalDef {
+                function_def,
+                location: _,
+            } => {
+                self.validate_definition(
+                    function_def,
+                    &mut std::collections::HashSet::new(),
+                    errors,
+                );
+            }
+            Statement::Expr { expr, location: _ } => {
+                self.validate_expression(expr, errors);
+            }
+            _ => {}
+        }
+    }
+
+    fn validate_expression(&self, expr: &Expr, errors: &mut Vec<AstValidationError>) {
+        match expr {
+            Expr::FunctionCall {
+                function,
+                args,
+                location: _,
+                ..
+            } => {
+                self.validate_expression(function, errors);
+                for arg in args {
+                    self.validate_expression(arg, errors);
+                }
+            }
+            Expr::BinaryOp {
+                left,
+                right,
+                location: _,
+                ..
+            } => {
+                self.validate_expression(left, errors);
+                self.validate_expression(right, errors);
+            }
+            Expr::Lambda {
+                body, location: _, ..
+            } => {
+                self.validate_expression(body, errors);
+            }
+            _ => {}
+        }
+    }
+
+    fn validate_type(&self, type_: &Type, errors: &mut Vec<AstValidationError>) {
+        match type_ {
+            Type::Named {
+                params,
+                location: _,
+                ..
+            } => {
+                for param in params {
+                    self.validate_type(param, errors);
+                }
+            }
+            Type::Function {
+                param,
+                result,
+                location: _,
+            } => {
+                self.validate_type(param, errors);
+                self.validate_type(result, errors);
+            }
+            Type::Tuple {
+                elements,
+                location: _,
+            } => {
+                for elem in elements {
+                    self.validate_type(elem, errors);
+                }
+            }
+            _ => {}
+        }
+    }
+}

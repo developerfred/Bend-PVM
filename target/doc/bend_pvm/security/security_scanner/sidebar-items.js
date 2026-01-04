@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SecuritySeverity","VulnerabilityType"],"struct":["ScanResult","SecurityScanner","Vulnerability"]};

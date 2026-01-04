@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SafeMathError"],"fn":["register_safe_math"],"struct":["SafeMath"],"trait":["SafeArithmetic"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["OptimizationError","OptimizationLevel","OptimizationResult"],"fn":["create_default_manager"],"struct":["OptimizationManager"],"trait":["OptimizationPass"]};
