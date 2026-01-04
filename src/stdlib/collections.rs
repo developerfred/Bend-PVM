@@ -95,12 +95,15 @@ impl VecUtils {
     }
 
     /// Reduce elements
-    pub fn reduce<T>(v: &Vec<T>, reducer: impl Fn(Option<T>, &T) -> T) -> Option<T> {
+    pub fn reduce<T>(v: &Vec<T>, reducer: impl Fn(Option<&T>, &T) -> T) -> Option<T>
+    where
+        T: Clone,
+    {
         let mut iter = v.iter();
         let first = iter.next()?;
         let mut result = first.clone();
         for item in iter {
-            result = reducer(Some(result), item);
+            result = reducer(Some(&result), item);
         }
         Some(result)
     }
@@ -108,7 +111,7 @@ impl VecUtils {
     /// Sort vector
     pub fn sort<T>(v: &mut Vec<T>)
     where
-        T: PartialOrd,
+        T: Ord,
     {
         v.sort();
     }
@@ -116,7 +119,7 @@ impl VecUtils {
     /// Sort by key
     pub fn sort_by<T, K>(v: &mut Vec<T>, key: impl Fn(&T) -> K)
     where
-        K: PartialOrd,
+        K: Ord,
     {
         v.sort_by_key(key);
     }
@@ -126,33 +129,79 @@ impl VecUtils {
         v.reverse();
     }
 
-    /// Join vector to string
-    pub fn join(v: &Vec<String>, separator: &str) -> String {
-        v.join(separator)
+    /// Get all elements as a slice
+    pub fn to_slice<T>(v: &Vec<T>) -> &[T] {
+        v.as_slice()
     }
 
-    /// Get slice
-    pub fn slice<T>(v: &Vec<T>, start: usize, end: usize) -> Vec<T>
+    /// Get all elements as a mutable slice
+    pub fn to_mut_slice<T>(v: &mut Vec<T>) -> &mut [T] {
+        v.as_mut_slice()
+    }
+
+    /// Extend from slice
+    pub fn extend_from_slice<T>(v: &mut Vec<T>, slice: &[T])
     where
         T: Clone,
     {
-        v[start..end].to_vec()
+        v.extend_from_slice(slice);
     }
 
-    /// Extend vector
-    pub fn extend<T>(v: &mut Vec<T>, other: &Vec<T>)
+    /// Split off at index
+    pub fn split_off<T>(v: &mut Vec<T>, at: usize) -> Vec<T>
     where
         T: Clone,
     {
-        v.extend(other.clone());
+        v.split_off(at)
     }
 
-    /// Dedup vector
-    pub fn dedup<T>(v: &mut Vec<T>)
+    /// Append another vector
+    pub fn append<T>(v: &mut Vec<T>, other: &mut Vec<T>) {
+        v.append(other);
+    }
+
+    /// Drain a range
+    pub fn drain<T>(
+        v: &mut Vec<T>,
+        range: impl std::ops::RangeBounds<usize>,
+    ) -> std::vec::Drain<'_, T> {
+        v.drain(range)
+    }
+
+    /// Get values as Vec
+    pub fn values<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<V>
     where
-        T: PartialEq,
+        V: Clone,
     {
-        v.dedup();
+        map.values().cloned().collect()
+    }
+
+    /// Get keys as Vec
+    pub fn keys<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<K>
+    where
+        K: Clone,
+    {
+        map.keys().cloned().collect()
+    }
+
+    /// Get entries as Vec of tuples
+    pub fn entries<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<(K, V)>
+    where
+        K: Clone,
+        V: Clone,
+    {
+        map.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+    }
+
+    /// Insert all from vector
+    pub fn insert_all<K, V>(map: &mut std::collections::HashMap<K, V>, entries: &[(K, V)])
+    where
+        K: Clone + std::hash::Hash + Eq,
+        V: Clone,
+    {
+        for (k, v) in entries {
+            map.insert(k.clone(), v.clone());
+        }
     }
 }
 
@@ -179,7 +228,7 @@ impl MapUtils {
     }
 
     /// Get value by key
-    pub fn get<K, V>(map: &std::collections::HashMap<K, V>, key: &K) -> Option<&V>
+    pub fn get<'a, K, V>(map: &'a std::collections::HashMap<K, V>, key: &K) -> Option<&'a V>
     where
         K: std::hash::Hash + Eq,
     {
@@ -218,17 +267,27 @@ impl MapUtils {
     }
 
     /// Get all keys
-    pub fn keys<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<K> {
+    pub fn keys<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<K>
+    where
+        K: Clone,
+    {
         map.keys().cloned().collect()
     }
 
     /// Get all values
-    pub fn values<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<V> {
+    pub fn values<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<V>
+    where
+        V: Clone,
+    {
         map.values().cloned().collect()
     }
 
     /// Iterate over entries
-    pub fn entries<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<(K, V)> {
+    pub fn entries<K, V>(map: &std::collections::HashMap<K, V>) -> Vec<(K, V)>
+    where
+        K: Clone,
+        V: Clone,
+    {
         map.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
 }

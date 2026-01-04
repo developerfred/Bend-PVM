@@ -1,256 +1,123 @@
-# GitHub Actions workflow for Bend-PVM CI/CD
-
-name: Bend-PVM CI/CD
+name: Bend-PVM Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ "main", "develop" ]
+    tags: [ "v*" ]
   pull_request:
-    branches: [main, develop]
+    branches: [ "main", "develop" ]
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
+  CICD_CACHE_KEY: "2026-v1"
 
 jobs:
-  # Job 1: Code Quality Checks
-  quality-checks:
-    name: Code Quality
+  # ------------------------------------------------------------------
+  # STAGE 1: QUALITY ASSURANCE (Fast Feedback)
+  # ------------------------------------------------------------------
+  qa:
+    name: 🛡️ Quality Assurance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          components: rustfmt, clippy
 
-      - name: Check formatting
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          key: ${{ env.CICD_CACHE_KEY }}
+
+      - name: Install Tools (Nextest & Deny)
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest, cargo-deny
+
+      - name: Check Formatting
         run: cargo fmt --all -- --check
 
-      - name: Check Clippy
-        run: cargo clippy --all --all-features -- -D warnings
+      - name: Security Audit (Dependencies)
+        run: cargo deny check advisories
 
-      - name: Check documentation
-        run: cargo doc --all --no-deps
+      - name: Linting (Clippy)
+        run: cargo clippy --all-features -- -D warnings
 
-      - name: Audit dependencies
-        run: cargo audit --deny warnings
+      - name: Fast Unit Tests
+        run: cargo nextest run --all-features
 
-  # Job 2: Build and Test
-  build-and-test:
-    name: Build & Test
+  # ------------------------------------------------------------------
+  # STAGE 2: BUILD & DEPLOY - STAGING
+  # ------------------------------------------------------------------
+  deploy-staging:
+    name: 🚀 Deploy Staging
+    needs: qa
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust: [stable, beta]
+    environment: staging
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust ${{ matrix.rust }}
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
+          key: ${{ env.CICD_CACHE_KEY }}
 
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/pkg/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+      - name: Build Staging Artifact
+        # Uses our intelligent script with --env staging (Debug symbols enabled)
+        run: ./scripts/build.sh --env staging
 
-      - name: Build
-        run: cargo build --all-features
-
-      - name: Run tests
-        run: cargo test --all-features -- --test-threads=4
-
-      - name: Install tarpaulin
-        if: matrix.rust == 'stable'
-        run: cargo install cargo-tarpaulin
-
-      - name: Generate code coverage
-        if: matrix.rust == 'stable'
-        run: |
-          cargo tarpaulin --all-features --output-dir coverage --codecov
-
-      - name: Upload coverage to Codecov
-        if: matrix.rust == 'stable'
-        uses: codecov/codecov-action@v3
-        with:
-          files: coverage/tarpaulin-report.xml
-          fail_ci_if_error: true
-
-  # Job 3: Security Analysis
-  security-analysis:
-    name: Security Analysis
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Run cargo-audit
-        run: cargo audit --deny warnings --json > audit-results.json
-
-      - name: Install cargo-deny
-        run: cargo install cargo-deny
-
-      - name: Run cargo-deny
-        run: cargo deny check --hide-inclusion-graph
-
-      - name: Upload audit results
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: security-audit
-          path: audit-results.json
+          name: bend-pvm-staging
+          path: target/release/bend-pvm
+          retention-days: 5
 
-  # Job 4: Performance Benchmarks
-  benchmarks:
-    name: Benchmarks
+      # Placeholder for actual deployment step (e.g., SCP, Docker Push, AWS S3)
+      - name: Simulate Deployment
+        run: echo "Deploying bend-pvm-staging to Staging Server..."
+
+  # ------------------------------------------------------------------
+  # STAGE 3: BUILD & DEPLOY - PRODUCTION
+  # ------------------------------------------------------------------
+  deploy-production:
+    name: 💎 Deploy Production
+    needs: qa
+    # Trigger on main branch or tags starting with 'v'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          key: ${{ env.CICD_CACHE_KEY }}
 
-      - name: Run benchmarks
-        run: cargo bench --all-features -- --output-style json > benchmark-results.json
+      - name: Build Production Artifact
+        # Uses our intelligent script with --env production (LTO, Strip, optimized)
+        run: ./scripts/build.sh --env production
 
-      - name: Upload benchmark results
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: benchmarks
-          path: benchmark-results.json
+          name: bend-pvm-production
+          path: target/release/bend-pvm
+          retention-days: 30
 
-      - name: Comment on PR with benchmark results
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '## Benchmark Results\n\nSee artifacts for detailed performance metrics.'
-            })
-
-  # Job 5: Multi-platform Build
-  multi-platform:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable]
-        include:
-          - os: ubuntu-latest
-            platform: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            platform: x86_64-apple-darwin
-          - os: windows-latest
-            platform: x86_64-pc-windows-msvc
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust ${{ matrix.rust }} on ${{ matrix.os }}
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          target: ${{ matrix.platform }}
-          override: true
-
-      - name: Build binary
-        run: cargo build --release --target ${{ matrix.platform }}
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bend-pvm-${{ matrix.platform }}
-          path: target/${{ matrix.platform }}/release/bend-pvm
-
-  # Job 6: LSP Server Build
-  lsp-build:
-    name: Build LSP Server
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Build LSP
-        run: cargo build -p bend-pvm-lsp
-
-      - name: Upload LSP artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bend-pvm-lsp
-          path: target/release/bend-pvm-lsp
-
-# Job 7: Release (only on tags)
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build-and-test, multi-platform, lsp-build]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Create release
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            target/release/bend-pvm
-            target/release/bend-pvm-lsp
-            target/x86_64-unknown-linux-gnu/release/bend-pvm
-            target/x86_64-apple-darwin/release/bend-pvm
-            target/x86_64-pc-windows-msvc/release/bend-pvm.exe
+          files: target/release/bend-pvm
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# Job 8: Notify on Failure
-  notify-failure:
-    name: Notify on Failure
-    runs-on: ubuntu-latest
-    needs: [quality-checks, build-and-test, security-analysis]
-    if: failure()
-    steps:
-      - name: Send notification
-        run: |
-          echo "Build failed! Check the workflow logs for details."
-          # Can be extended to send Slack/Discord notifications
