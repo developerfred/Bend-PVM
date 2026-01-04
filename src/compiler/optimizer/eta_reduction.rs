@@ -1,5 +1,5 @@
+use crate::compiler::optimizer::passes::{OptimizationError, OptimizationPass, OptimizationResult};
 use crate::compiler::parser::ast::*;
-use crate::compiler::optimizer::passes::{OptimizationPass, OptimizationResult, OptimizationError};
 use std::collections::HashSet;
 
 /// Eta reduction optimization pass
@@ -14,60 +14,69 @@ impl EtaReductionPass {
     pub fn new() -> Self {
         EtaReductionPass
     }
-    
+
     /// Optimize a block using eta reduction
     fn optimize_block(&self, block: &Block) -> (Block, bool) {
         let mut new_statements = Vec::new();
         let mut modified = false;
-        
+
         for statement in &block.statements {
             let (optimized_statement, stmt_modified) = self.optimize_statement(statement);
             new_statements.push(optimized_statement);
             modified = modified || stmt_modified;
         }
-        
+
         (
             Block {
                 statements: new_statements,
                 location: block.location.clone(),
             },
-            modified
+            modified,
         )
     }
-    
+
     /// Optimize a statement using eta reduction
     fn optimize_statement(&self, statement: &Statement) -> (Statement, bool) {
         match statement {
-            Statement::Assignment { pattern, value, location } => {
+            Statement::Assignment {
+                pattern,
+                value,
+                location,
+            } => {
                 let (optimized_expr, expr_modified) = self.optimize_expr(value);
-                
+
                 (
                     Statement::Assignment {
                         pattern: pattern.clone(),
                         value: optimized_expr,
                         location: location.clone(),
                     },
-                    expr_modified
+                    expr_modified,
                 )
-            },
+            }
             Statement::Return { value, location } => {
                 let (optimized_expr, expr_modified) = self.optimize_expr(value);
-                
+
                 (
                     Statement::Return {
                         value: optimized_expr,
                         location: location.clone(),
                     },
-                    expr_modified
+                    expr_modified,
                 )
-            },
-            Statement::If { condition, then_branch, else_branch, location } => {
+            }
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+                location,
+            } => {
                 let (optimized_condition, condition_modified) = self.optimize_expr(condition);
                 let (optimized_then, then_modified) = self.optimize_block(then_branch);
                 let (optimized_else, else_modified) = self.optimize_block(else_branch);
-                
+
                 let modified = condition_modified || then_modified || else_modified;
-                
+
                 (
                     Statement::If {
                         condition: optimized_condition,
@@ -75,46 +84,56 @@ impl EtaReductionPass {
                         else_branch: optimized_else,
                         location: location.clone(),
                     },
-                    modified
+                    modified,
                 )
-            },
+            }
             Statement::Expr { expr, location } => {
                 let (optimized_expr, expr_modified) = self.optimize_expr(expr);
-                
+
                 (
                     Statement::Expr {
                         expr: optimized_expr,
                         location: location.clone(),
                     },
-                    expr_modified
+                    expr_modified,
                 )
-            },
+            }
             // For other statement types, implement optimization logic
             // This is a simplified implementation
             _ => (statement.clone(), false),
         }
     }
-    
+
     /// Optimize an expression using eta reduction
     fn optimize_expr(&self, expr: &Expr) -> (Expr, bool) {
         match expr {
-            Expr::Lambda { params, body, location } => {
+            Expr::Lambda {
+                params,
+                body,
+                location,
+            } => {
                 // First, recursively optimize the body
                 let (optimized_body, body_modified) = self.optimize_expr(body);
-                
+
                 // Check for eta-reducible form: lambda x: f(x)
-                if let Expr::FunctionCall { function, args, named_args, .. } = &optimized_body {
+                if let Expr::FunctionCall {
+                    function,
+                    args,
+                    named_args,
+                    ..
+                } = &optimized_body
+                {
                     // Check if this is a simple function call that can be eta-reduced
                     if named_args.is_empty() && args.len() == params.len() {
                         // Check that each argument is a parameter variable in the same order
                         let mut can_eta_reduce = true;
                         let mut param_names = HashSet::new();
-                        
+
                         // Collect parameter names
                         for param in params.iter() {
                             param_names.insert(&param.name);
                         }
-                        
+
                         // Check that each argument is a parameter variable
                         for (i, arg) in args.iter().enumerate() {
                             if let Expr::Variable { name, .. } = arg {
@@ -127,14 +146,14 @@ impl EtaReductionPass {
                                 break;
                             }
                         }
-                        
+
                         if can_eta_reduce {
                             // Eta-reduce the lambda to the function
                             return ((**function).clone(), true);
                         }
                     }
                 }
-                
+
                 // If not eta-reducible, return the optimized lambda
                 (
                     Expr::Lambda {
@@ -142,21 +161,31 @@ impl EtaReductionPass {
                         body: Box::new(optimized_body),
                         location: location.clone(),
                     },
-                    body_modified
+                    body_modified,
                 )
-            },
-            Expr::UnsccopedLambda { params, body, location } => {
+            }
+            Expr::UnsccopedLambda {
+                params,
+                body,
+                location,
+            } => {
                 // Recursively optimize the body
                 let (optimized_body, body_modified) = self.optimize_expr(body);
-                
+
                 // Check for eta-reducible form: lambda x: f(x)
-                if let Expr::FunctionCall { function, args, named_args, .. } = &optimized_body {
+                if let Expr::FunctionCall {
+                    function,
+                    args,
+                    named_args,
+                    ..
+                } = &optimized_body
+                {
                     // Check if this is a simple function call that can be eta-reduced
                     if named_args.is_empty() && args.len() == params.len() {
                         // Check that each argument is a parameter variable in the same order
                         let mut can_eta_reduce = true;
                         let param_set: HashSet<&String> = params.iter().collect();
-                        
+
                         // Check that each argument is a parameter variable
                         for (i, arg) in args.iter().enumerate() {
                             if let Expr::Variable { name, .. } = arg {
@@ -169,14 +198,14 @@ impl EtaReductionPass {
                                 break;
                             }
                         }
-                        
+
                         if can_eta_reduce {
                             // Eta-reduce the lambda to the function
                             return ((**function).clone(), true);
                         }
                     }
                 }
-                
+
                 // If not eta-reducible, return the optimized lambda
                 (
                     Expr::UnsccopedLambda {
@@ -184,15 +213,20 @@ impl EtaReductionPass {
                         body: Box::new(optimized_body),
                         location: location.clone(),
                     },
-                    body_modified
+                    body_modified,
                 )
-            },
-            Expr::BinaryOp { left, operator, right, location } => {
+            }
+            Expr::BinaryOp {
+                left,
+                operator,
+                right,
+                location,
+            } => {
                 let (optimized_left, left_modified) = self.optimize_expr(left);
                 let (optimized_right, right_modified) = self.optimize_expr(right);
-                
+
                 let modified = left_modified || right_modified;
-                
+
                 (
                     Expr::BinaryOp {
                         left: Box::new(optimized_left),
@@ -200,24 +234,29 @@ impl EtaReductionPass {
                         right: Box::new(optimized_right),
                         location: location.clone(),
                     },
-                    modified
+                    modified,
                 )
-            },
-            Expr::FunctionCall { function, args, named_args, location } => {
+            }
+            Expr::FunctionCall {
+                function,
+                args,
+                named_args,
+                location,
+            } => {
                 let (optimized_function, function_modified) = self.optimize_expr(function);
-                
+
                 let mut optimized_args = Vec::new();
                 let mut args_modified = false;
-                
+
                 for arg in args {
                     let (optimized_arg, arg_modified) = self.optimize_expr(arg);
                     optimized_args.push(optimized_arg);
                     args_modified = args_modified || arg_modified;
                 }
-                
+
                 let mut optimized_named_args = named_args.clone();
                 let mut named_args_modified = false;
-                
+
                 for (name, arg) in named_args {
                     let (optimized_arg, arg_modified) = self.optimize_expr(arg);
                     if arg_modified {
@@ -225,9 +264,9 @@ impl EtaReductionPass {
                         named_args_modified = true;
                     }
                 }
-                
+
                 let modified = function_modified || args_modified || named_args_modified;
-                
+
                 (
                     Expr::FunctionCall {
                         function: Box::new(optimized_function),
@@ -235,21 +274,21 @@ impl EtaReductionPass {
                         named_args: optimized_named_args,
                         location: location.clone(),
                     },
-                    modified
+                    modified,
                 )
-            },
+            }
             Expr::Block { block, location } => {
                 // Optimize the block
                 let (optimized_block, block_modified) = self.optimize_block(block);
-                
+
                 (
                     Expr::Block {
                         block: optimized_block,
                         location: location.clone(),
                     },
-                    block_modified
+                    block_modified,
                 )
-            },
+            }
             // For other expression types, no optimization needed
             _ => (expr.clone(), false),
         }
@@ -260,23 +299,30 @@ impl OptimizationPass for EtaReductionPass {
     fn name(&self) -> &'static str {
         "eta_reduction"
     }
-    
+
     fn description(&self) -> &'static str {
         "Performs eta reduction for functions that just wrap other functions"
     }
-    
+
     fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
         let mut modified = false;
         let mut new_definitions = Vec::new();
-        
+
         // Optimize each definition
         for definition in &program.definitions {
             match definition {
-                Definition::FunctionDef { name, params, return_type, body, checked, location } => {
+                Definition::FunctionDef {
+                    name,
+                    params,
+                    return_type,
+                    body,
+                    checked,
+                    location,
+                } => {
                     // Optimize the function body
                     let (optimized_body, body_modified) = self.optimize_block(body);
                     modified = modified || body_modified;
-                    
+
                     new_definitions.push(Definition::FunctionDef {
                         name: name.clone(),
                         params: params.clone(),
@@ -285,12 +331,12 @@ impl OptimizationPass for EtaReductionPass {
                         checked: *checked,
                         location: location.clone(),
                     });
-                },
+                }
                 // Other definition types don't need optimization
                 _ => new_definitions.push(definition.clone()),
             }
         }
-        
+
         // Return the result
         if modified {
             Ok(OptimizationResult::Modified(Program {

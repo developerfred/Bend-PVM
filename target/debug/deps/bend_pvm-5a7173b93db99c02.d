@@ -1,0 +1,47 @@
+/Volumes/Codingsh/bend-pvm-ecossystem/bend-pvm/target/debug/deps/bend_pvm-5a7173b93db99c02.d: src/lib.rs src/build.rs src/error.rs src/ffi.rs src/compiler/lexer/lexer.rs src/compiler/lexer/token.rs src/compiler/parser/ast.rs src/compiler/parser/parser.rs src/compiler/analyzer/type_checker.rs src/compiler/optimizer/eta_reduction.rs src/compiler/optimizer/float_comb.rs src/compiler/optimizer/linearize.rs src/compiler/optimizer/passes.rs src/compiler/optimizer/pruner.rs src/compiler/codegen/ir.rs src/compiler/codegen/metadata.rs src/compiler/codegen/risc_v.rs src/compiler/polkavm/abi.rs src/compiler/polkavm/bridge.rs src/compiler/polkavm/host.rs src/compiler/module/mod.rs src/compiler/module/loader.rs src/compiler/module/namespace.rs src/compiler/module/resolver.rs src/stdlib/mod.rs src/stdlib/core.rs src/stdlib/crypto.rs src/stdlib/math.rs src/security/mod.rs src/security/access_control.rs src/security/fuzz_testing.rs src/security/gas_metering.rs src/security/reentrancy_guard.rs src/security/safe_math.rs src/security/security_scanner.rs src/security/static_analysis.rs src/security/validation.rs src/runtime/env.rs src/runtime/memory.rs src/runtime/metering.rs src/runtime/storage.rs
+
+/Volumes/Codingsh/bend-pvm-ecossystem/bend-pvm/target/debug/deps/libbend_pvm-5a7173b93db99c02.rmeta: src/lib.rs src/build.rs src/error.rs src/ffi.rs src/compiler/lexer/lexer.rs src/compiler/lexer/token.rs src/compiler/parser/ast.rs src/compiler/parser/parser.rs src/compiler/analyzer/type_checker.rs src/compiler/optimizer/eta_reduction.rs src/compiler/optimizer/float_comb.rs src/compiler/optimizer/linearize.rs src/compiler/optimizer/passes.rs src/compiler/optimizer/pruner.rs src/compiler/codegen/ir.rs src/compiler/codegen/metadata.rs src/compiler/codegen/risc_v.rs src/compiler/polkavm/abi.rs src/compiler/polkavm/bridge.rs src/compiler/polkavm/host.rs src/compiler/module/mod.rs src/compiler/module/loader.rs src/compiler/module/namespace.rs src/compiler/module/resolver.rs src/stdlib/mod.rs src/stdlib/core.rs src/stdlib/crypto.rs src/stdlib/math.rs src/security/mod.rs src/security/access_control.rs src/security/fuzz_testing.rs src/security/gas_metering.rs src/security/reentrancy_guard.rs src/security/safe_math.rs src/security/security_scanner.rs src/security/static_analysis.rs src/security/validation.rs src/runtime/env.rs src/runtime/memory.rs src/runtime/metering.rs src/runtime/storage.rs
+
+src/lib.rs:
+src/build.rs:
+src/error.rs:
+src/ffi.rs:
+src/compiler/lexer/lexer.rs:
+src/compiler/lexer/token.rs:
+src/compiler/parser/ast.rs:
+src/compiler/parser/parser.rs:
+src/compiler/analyzer/type_checker.rs:
+src/compiler/optimizer/eta_reduction.rs:
+src/compiler/optimizer/float_comb.rs:
+src/compiler/optimizer/linearize.rs:
+src/compiler/optimizer/passes.rs:
+src/compiler/optimizer/pruner.rs:
+src/compiler/codegen/ir.rs:
+src/compiler/codegen/metadata.rs:
+src/compiler/codegen/risc_v.rs:
+src/compiler/polkavm/abi.rs:
+src/compiler/polkavm/bridge.rs:
+src/compiler/polkavm/host.rs:
+src/compiler/module/mod.rs:
+src/compiler/module/loader.rs:
+src/compiler/module/namespace.rs:
+src/compiler/module/resolver.rs:
+src/stdlib/mod.rs:
+src/stdlib/core.rs:
+src/stdlib/crypto.rs:
+src/stdlib/math.rs:
+src/security/mod.rs:
+src/security/access_control.rs:
+src/security/fuzz_testing.rs:
+src/security/gas_metering.rs:
+src/security/reentrancy_guard.rs:
+src/security/safe_math.rs:
+src/security/security_scanner.rs:
+src/security/static_analysis.rs:
+src/security/validation.rs:
+src/runtime/env.rs:
+src/runtime/memory.rs:
+src/runtime/metering.rs:
+src/runtime/storage.rs:
+
+# env-dep:CARGO_PKG_VERSION=0.1.0

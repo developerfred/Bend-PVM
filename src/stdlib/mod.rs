@@ -1,10 +1,10 @@
 pub mod core;
-pub mod math;
 pub mod crypto;
+pub mod math;
 
 use self::core::StdlibCore;
-use self::math::{MathFunctions, SafeMath, BigIntMath, BitwiseMath, Random, Percentage};
 use self::crypto::CryptoFunctions;
+use self::math::{BigIntMath, BitwiseMath, MathFunctions, Percentage, Random, SafeMath};
 
 /// Initialize the standard library
 pub fn init_stdlib() -> StdlibCore {

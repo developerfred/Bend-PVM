@@ -1041,6 +1041,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_match_statement(&mut self) -> Result<Statement, ParseError> {
+        // For now, just return a placeholder implementation
+        // This will be expanded once the basic infrastructure is working
         Err(ParseError::Generic(
             "Match statements not implemented yet".to_string(),
         ))
@@ -1092,5 +1094,97 @@ impl<'a> Parser<'a> {
         Err(ParseError::Generic(
             "Library definitions not implemented yet".to_string(),
         ))
+    }
+
+    /// Parse a pattern for pattern matching
+    fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
+        let start_location = self.current_token.location.clone();
+
+        match &self.current_token.token {
+            Token::Identifier(name) => {
+                self.advance();
+                Ok(Pattern::Variable {
+                    name: name.clone(),
+                    location: start_location,
+                })
+            }
+            Token::Underscore => {
+                self.advance();
+                Ok(Pattern::Wildcard {
+                    location: start_location,
+                })
+            }
+            Token::LeftParen => {
+                self.advance();
+                let mut elements = Vec::new();
+
+                while !self.check_token(&Token::RightParen) {
+                    let element = self.parse_pattern()?;
+                    elements.push(element);
+
+                    if !self.check_token(&Token::RightParen) {
+                        self.expect_token(Token::Comma)?;
+                    }
+                }
+
+                self.expect_token(Token::RightParen)?;
+                let end_location = self.previous_token.location.clone();
+                let location = Location::span(&start_location, &end_location);
+
+                Ok(Pattern::Tuple { elements, location })
+            }
+            Token::Identifier(name) => {
+                // Could be a constructor pattern
+                self.advance();
+
+                if self.check_token(&Token::LeftBrace) {
+                    // Constructor with named fields
+                    self.advance();
+                    let mut fields = HashMap::new();
+
+                    while !self.check_token(&Token::RightBrace) {
+                        let field_name = self.expect_identifier()?;
+                        self.expect_token(Token::Colon)?;
+                        let field_pattern = self.parse_pattern()?;
+                        fields.insert(field_name, field_pattern);
+
+                        if !self.check_token(&Token::RightBrace) {
+                            self.expect_token(Token::Comma)?;
+                        }
+                    }
+
+                    self.expect_token(Token::RightBrace)?;
+                    let end_location = self.previous_token.location.clone();
+                    let location = Location::span(&start_location, &end_location);
+
+                    Ok(Pattern::Constructor {
+                        name: name.clone(),
+                        fields,
+                        location,
+                    })
+                } else {
+                    // Simple variable pattern
+                    Ok(Pattern::Variable {
+                        name: name.clone(),
+                        location: start_location,
+                    })
+                }
+            }
+            _ => {
+                // Try to parse as a literal pattern
+                let expr = self.parse_primary_expression()?;
+                if let Expr::Literal { kind, location } = expr {
+                    Ok(Pattern::Literal {
+                        value: Expr::Literal {
+                            kind,
+                            location: location.clone(),
+                        },
+                        location,
+                    })
+                } else {
+                    Err(ParseError::Generic(format!("Invalid pattern: {:?}", expr)))
+                }
+            }
+        }
     }
 }

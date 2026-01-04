@@ -1,6 +1,6 @@
-use logos::{Logos, Lexer};
-use std::collections::HashMap;
 use super::token::Token;
+use logos::{Lexer, Logos};
+use std::collections::HashMap;
 
 /// Define tokens using the Logos derive macro for efficient lexing
 #[derive(Logos, Debug, PartialEq, Clone)]
@@ -10,133 +10,132 @@ enum LogosToken {
     Identifier,
 
     // Keywords are handled in the callback for Identifier
-    
     #[regex("0|[1-9][0-9]*")]
     UintLiteral,
-    
+
     #[regex("[+-][0-9]+")]
     IntLiteral,
-    
+
     #[regex("[+-]?[0-9]+\\.[0-9]+")]
     FloatLiteral,
-    
+
     #[regex("\"[^\"]*\"")]
     StringLiteral,
-    
+
     #[regex("'[^']'")]
     CharLiteral,
-    
+
     #[regex("`[^`]*`")]
     SymbolLiteral,
-    
+
     #[token("(")]
     LParen,
-    
+
     #[token(")")]
     RParen,
-    
+
     #[token("{")]
     LBrace,
-    
+
     #[token("}")]
     RBrace,
-    
+
     #[token("[")]
     LBracket,
-    
+
     #[token("]")]
     RBracket,
-    
+
     #[token(":")]
     Colon,
-    
+
     #[token(";")]
     Semicolon,
-    
+
     #[token(",")]
     Comma,
-    
+
     #[token(".")]
     Dot,
-    
+
     #[token("->")]
     Arrow,
-    
+
     #[token("=>")]
     FatArrow,
-    
+
     #[token("=")]
     Equal,
-    
+
     #[token("~")]
     Tilde,
-    
+
     #[token("+")]
     Plus,
-    
+
     #[token("-")]
     Minus,
-    
+
     #[token("*")]
     Star,
-    
+
     #[token("/")]
     Slash,
-    
+
     #[token("%")]
     Percent,
-    
+
     #[token("^")]
     Caret,
-    
+
     #[token("&")]
     Ampersand,
-    
+
     #[token("|")]
     Pipe,
-    
+
     #[token(">")]
     GreaterThan,
-    
+
     #[token("<")]
     LessThan,
-    
+
     #[token(">=")]
     GreaterEqual,
-    
+
     #[token("<=")]
     LessEqual,
-    
+
     #[token("==")]
     EqualEqual,
-    
+
     #[token("!=")]
     NotEqual,
-    
+
     #[token("+=")]
     PlusEqual,
-    
+
     #[token("-=")]
     MinusEqual,
-    
+
     #[token("*=")]
     StarEqual,
-    
+
     #[token("/=")]
     SlashEqual,
-    
+
     #[token("%=")]
     PercentEqual,
-    
+
     #[token("^=")]
     CaretEqual,
-    
+
     #[token("&=")]
     AmpersandEqual,
-    
+
     #[token("|=")]
     PipeEqual,
-    
+
     // Comments
     #[regex("#\\{[^}]*\\}#", logos::skip)]
     MultiLineComment,
@@ -194,7 +193,7 @@ impl<'a> BendLexer<'a> {
         keywords.insert("import", Token::Import);
         keywords.insert("from", Token::From);
         keywords.insert("as", Token::As);
-        
+
         BendLexer {
             logos_lexer: LogosToken::lexer(source),
             keywords,
@@ -203,13 +202,13 @@ impl<'a> BendLexer<'a> {
             source,
         }
     }
-    
+
     /// Get the next token from the source
     pub fn next_token(&mut self) -> TokenWithPosition {
         let mut start_pos = self.logos_lexer.span().end;
-        
+
         let token_result = self.logos_lexer.next();
-        
+
         // The logos lexer skip patterns don't update our line/column count.
         // We need to check the text between the end of the last token and the start of this one.
         let skipped_text = &self.source[start_pos..self.logos_lexer.span().start];
@@ -221,16 +220,16 @@ impl<'a> BendLexer<'a> {
                 self.column += 1;
             }
         }
-        
+
         let actual_start_pos = self.logos_lexer.span().start;
         let start_column = self.column;
         let start_line = self.line;
-        
+
         let token = match token_result {
             Some(Ok(logos_token)) => {
                 let span = self.logos_lexer.span();
                 let text = &self.source[span.clone()];
-                
+
                 match logos_token {
                     LogosToken::Identifier => {
                         // Check if it's a keyword
@@ -243,7 +242,10 @@ impl<'a> BendLexer<'a> {
                     LogosToken::UintLiteral => {
                         if let Ok(value) = text.parse::<u32>() {
                             if value > 0xFFFFFF {
-                                Token::Error(format!("Unsigned integer literal exceeds u24 maximum value: {}", value))
+                                Token::Error(format!(
+                                    "Unsigned integer literal exceeds u24 maximum value: {}",
+                                    value
+                                ))
                             } else {
                                 Token::UintLiteral(value)
                             }
@@ -254,7 +256,10 @@ impl<'a> BendLexer<'a> {
                     LogosToken::IntLiteral => {
                         if let Ok(value) = text.parse::<i32>() {
                             if value > 0x7FFFFF || value < -0x800000 {
-                                Token::Error(format!("Signed integer literal exceeds i24 range: {}", value))
+                                Token::Error(format!(
+                                    "Signed integer literal exceeds i24 range: {}",
+                                    value
+                                ))
                             } else {
                                 Token::IntLiteral(value)
                             }
@@ -331,7 +336,7 @@ impl<'a> BendLexer<'a> {
             }
             None => Token::EOF,
         };
-        
+
         // Update line and column count for next token (the actual token text)
         for c in self.source[self.logos_lexer.span().clone()].chars() {
             if c == '\n' {
@@ -341,7 +346,7 @@ impl<'a> BendLexer<'a> {
                 self.column += 1;
             }
         }
-        
+
         TokenWithPosition {
             token,
             start: actual_start_pos,
@@ -368,8 +373,8 @@ impl<'a> BendLexer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::token::Token;
+    use super::*;
 
     #[test]
     fn test_keywords() {
@@ -482,7 +487,11 @@ mod tests {
             let token = lexer.next_token();
             match (&token.token, &expected) {
                 (Token::FloatLiteral(actual), Token::FloatLiteral(expected_val)) => {
-                    assert!((actual - expected_val).abs() < 0.001, "Failed for: {}", text);
+                    assert!(
+                        (actual - expected_val).abs() < 0.001,
+                        "Failed for: {}",
+                        text
+                    );
                 }
                 _ => panic!("Expected FloatLiteral for: {}", text),
             }
@@ -495,7 +504,10 @@ mod tests {
             ("\"hello\"", Token::StringLiteral("hello".to_string())),
             ("\"world\"", Token::StringLiteral("world".to_string())),
             ("\"\"", Token::StringLiteral("".to_string())),
-            ("\"hello world\"", Token::StringLiteral("hello world".to_string())),
+            (
+                "\"hello world\"",
+                Token::StringLiteral("hello world".to_string()),
+            ),
         ];
 
         for (text, expected) in test_cases {

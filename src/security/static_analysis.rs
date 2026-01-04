@@ -1,8 +1,7 @@
 /// Static Analysis module
-/// 
+///
 /// Provides comprehensive static code analysis for security properties,
 /// code quality assessment, and automated security verification.
-
 use crate::compiler::parser::ast::*;
 use crate::security::{SecurityError, SecuritySeverity};
 use std::collections::{HashMap, HashSet};
@@ -33,13 +32,14 @@ impl Default for StaticAnalyzer {
 impl StaticAnalyzer {
     /// Create a new static analyzer
     pub fn new() -> Self {
-        Self {
-            issues: Vec::new(),
-        }
+        Self { issues: Vec::new() }
     }
 
     /// Analyze a program
-    pub fn analyze_program(&mut self, _program: &Program) -> Result<Vec<AnalysisIssue>, SecurityError> {
+    pub fn analyze_program(
+        &mut self,
+        _program: &Program,
+    ) -> Result<Vec<AnalysisIssue>, SecurityError> {
         // Simplified analysis - just return existing issues
         Ok(self.issues.clone())
     }

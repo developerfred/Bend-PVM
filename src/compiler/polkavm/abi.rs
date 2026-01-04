@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::compiler::codegen::metadata::{ContractMetadata, FunctionMetadata};
 
@@ -7,22 +7,22 @@ use crate::compiler::codegen::metadata::{ContractMetadata, FunctionMetadata};
 pub struct ContractABI {
     /// Contract name
     pub name: String,
-    
+
     /// Contract version
     pub version: String,
-    
+
     /// Contract methods
     pub methods: Vec<MethodABI>,
-    
+
     /// Contract events
     pub events: Vec<EventABI>,
-    
+
     /// Contract errors
     pub errors: Vec<ErrorABI>,
-    
+
     /// Contract state variables
     pub state_variables: Vec<StateVariableABI>,
-    
+
     /// Custom types used in the contract
     pub types: Vec<TypeABI>,
 }
@@ -32,22 +32,22 @@ pub struct ContractABI {
 pub struct MethodABI {
     /// Method name
     pub name: String,
-    
+
     /// Method selector (4-byte hash of the method signature)
     pub selector: String,
-    
+
     /// Method type (function, constructor, etc.)
     pub type_: MethodType,
-    
+
     /// Method inputs
     pub inputs: Vec<ParameterABI>,
-    
+
     /// Method outputs
     pub outputs: Vec<ParameterABI>,
-    
+
     /// Method state mutability
     pub state_mutability: StateMutability,
-    
+
     /// Whether the method is payable
     pub payable: bool,
 }
@@ -57,13 +57,13 @@ pub struct MethodABI {
 pub struct ParameterABI {
     /// Parameter name
     pub name: String,
-    
+
     /// Parameter type
     pub type_: String,
-    
+
     /// Parameter components (for complex types)
     pub components: Option<Vec<ParameterABI>>,
-    
+
     /// Whether the parameter is indexed (for events)
     pub indexed: Option<bool>,
 }
@@ -73,10 +73,10 @@ pub struct ParameterABI {
 pub struct EventABI {
     /// Event name
     pub name: String,
-    
+
     /// Event inputs
     pub inputs: Vec<ParameterABI>,
-    
+
     /// Whether the event is anonymous
     pub anonymous: bool,
 }
@@ -86,7 +86,7 @@ pub struct EventABI {
 pub struct ErrorABI {
     /// Error name
     pub name: String,
-    
+
     /// Error inputs
     pub inputs: Vec<ParameterABI>,
 }
@@ -96,13 +96,13 @@ pub struct ErrorABI {
 pub struct StateVariableABI {
     /// State variable name
     pub name: String,
-    
+
     /// State variable type
     pub type_: String,
-    
+
     /// Whether the state variable is public
     pub public: bool,
-    
+
     /// Whether the state variable is constant
     pub constant: bool,
 }
@@ -112,10 +112,10 @@ pub struct StateVariableABI {
 pub struct TypeABI {
     /// Type name
     pub name: String,
-    
+
     /// Type kind (struct, enum, etc.)
     pub kind: TypeKind,
-    
+
     /// Type components (for complex types)
     pub components: Vec<ParameterABI>,
 }
@@ -126,15 +126,15 @@ pub enum MethodType {
     /// Regular function
     #[serde(rename = "function")]
     Function,
-    
+
     /// Contract constructor
     #[serde(rename = "constructor")]
     Constructor,
-    
+
     /// Receive function (for receiving native currency)
     #[serde(rename = "receive")]
     Receive,
-    
+
     /// Fallback function (called when no other function matches)
     #[serde(rename = "fallback")]
     Fallback,
@@ -146,15 +146,15 @@ pub enum StateMutability {
     /// Function does not read or modify state
     #[serde(rename = "pure")]
     Pure,
-    
+
     /// Function reads but does not modify state
     #[serde(rename = "view")]
     View,
-    
+
     /// Function may modify state
     #[serde(rename = "nonpayable")]
     NonPayable,
-    
+
     /// Function may receive native currency
     #[serde(rename = "payable")]
     Payable,
@@ -166,11 +166,11 @@ pub enum TypeKind {
     /// Struct type
     #[serde(rename = "struct")]
     Struct,
-    
+
     /// Enum type
     #[serde(rename = "enum")]
     Enum,
-    
+
     /// Tuple type
     #[serde(rename = "tuple")]
     Tuple,
@@ -179,14 +179,14 @@ pub enum TypeKind {
 /// Generate an ABI from contract metadata
 pub fn generate_abi(metadata: &ContractMetadata) -> ContractABI {
     let mut methods = Vec::new();
-    
+
     // Add methods from the metadata
     for (name, function) in &metadata.functions {
         methods.push(function_to_method_abi(name, function));
     }
-    
+
     // For this example, we're not implementing events, errors, state variables, or types
-    
+
     ContractABI {
         name: metadata.name.clone(),
         version: metadata.version.clone(),
@@ -210,7 +210,7 @@ fn function_to_method_abi(name: &str, function: &FunctionMetadata) -> MethodABI 
             indexed: None,
         });
     }
-    
+
     // Convert function return type to ABI parameters
     let outputs = if let Some(return_type) = &function.return_type {
         vec![ParameterABI {
@@ -222,10 +222,10 @@ fn function_to_method_abi(name: &str, function: &FunctionMetadata) -> MethodABI 
     } else {
         Vec::new()
     };
-    
+
     // Convert function selector to hex string
     let selector = hex::encode(function.selector);
-    
+
     MethodABI {
         name: name.to_string(),
         selector: format!("0x{}", selector),

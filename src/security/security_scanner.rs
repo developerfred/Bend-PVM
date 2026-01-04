@@ -1,12 +1,11 @@
 /// Security Scanner module
-/// 
+///
 /// Provides comprehensive vulnerability detection and security scanning
 /// for Bend-PVM programs to identify potential security risks.
-
 use crate::compiler::parser::ast::*;
 use crate::security::SecurityError;
-use std::collections::{HashMap, HashSet, VecDeque};
 use regex::Regex;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Security vulnerability types
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
@@ -109,7 +108,7 @@ impl SecurityScanner {
             violation_count: 0,
             ignored_patterns: HashSet::new(),
         };
-        
+
         scanner.initialize_patterns();
         scanner
     }
@@ -121,13 +120,13 @@ impl SecurityScanner {
             Regex::new(r"\+\s*\d+").unwrap(),
             Regex::new(r"\*\s*\d+").unwrap(),
         ];
-        self.vuln_patterns.insert(VulnerabilityType::IntegerOverflow, overflow_patterns);
+        self.vuln_patterns
+            .insert(VulnerabilityType::IntegerOverflow, overflow_patterns);
 
         // Integer underflow patterns
-        let underflow_patterns = vec![
-            Regex::new(r"-\s*\d+").unwrap(),
-        ];
-        self.vuln_patterns.insert(VulnerabilityType::IntegerUnderflow, underflow_patterns);
+        let underflow_patterns = vec![Regex::new(r"-\s*\d+").unwrap()];
+        self.vuln_patterns
+            .insert(VulnerabilityType::IntegerUnderflow, underflow_patterns);
 
         // Reentrancy patterns
         let reentrancy_patterns = vec![
@@ -135,7 +134,8 @@ impl SecurityScanner {
             Regex::new(r"delegatecall\(").unwrap(),
             Regex::new(r"callcode\(").unwrap(),
         ];
-        self.vuln_patterns.insert(VulnerabilityType::Reentrancy, reentrancy_patterns);
+        self.vuln_patterns
+            .insert(VulnerabilityType::Reentrancy, reentrancy_patterns);
 
         // Unchecked call return patterns
         let unchecked_patterns = vec![
@@ -143,7 +143,8 @@ impl SecurityScanner {
             Regex::new(r"\.send\(").unwrap(),
             Regex::new(r"\.transfer\(").unwrap(),
         ];
-        self.vuln_patterns.insert(VulnerabilityType::UncheckedCallReturn, unchecked_patterns);
+        self.vuln_patterns
+            .insert(VulnerabilityType::UncheckedCallReturn, unchecked_patterns);
 
         // Timestamp dependence patterns
         let timestamp_patterns = vec![
@@ -151,7 +152,8 @@ impl SecurityScanner {
             Regex::new(r"now").unwrap(),
             Regex::new(r"block\.number").unwrap(),
         ];
-        self.vuln_patterns.insert(VulnerabilityType::TimestampDependence, timestamp_patterns);
+        self.vuln_patterns
+            .insert(VulnerabilityType::TimestampDependence, timestamp_patterns);
 
         // Unprotected external call patterns
         let external_call_patterns = vec![
@@ -159,14 +161,18 @@ impl SecurityScanner {
             Regex::new(r"delegatecall\(").unwrap(),
             Regex::new(r"staticcall\(").unwrap(),
         ];
-        self.vuln_patterns.insert(VulnerabilityType::UnprotectedExternalCall, external_call_patterns);
+        self.vuln_patterns.insert(
+            VulnerabilityType::UnprotectedExternalCall,
+            external_call_patterns,
+        );
 
         // Unbounded loop patterns
         let unbounded_patterns = vec![
             Regex::new(r"for\s*\(").unwrap(),
             Regex::new(r"while\s*\(").unwrap(),
         ];
-        self.vuln_patterns.insert(VulnerabilityType::UnboundedLoop, unbounded_patterns);
+        self.vuln_patterns
+            .insert(VulnerabilityType::UnboundedLoop, unbounded_patterns);
 
         // Array access patterns
         let array_patterns = vec![
@@ -174,7 +180,8 @@ impl SecurityScanner {
             Regex::new(r"\.push\(").unwrap(),
             Regex::new(r"\.pop\(").unwrap(),
         ];
-        self.vuln_patterns.insert(VulnerabilityType::UncheckedArrayAccess, array_patterns);
+        self.vuln_patterns
+            .insert(VulnerabilityType::UncheckedArrayAccess, array_patterns);
     }
 
     /// Scan a program for vulnerabilities
@@ -205,7 +212,7 @@ impl SecurityScanner {
         }
 
         let scan_duration = start_time.elapsed().as_millis() as u64;
-        
+
         // Estimate coverage (simplified)
         let coverage_percentage = 75.0; // Placeholder calculation
 
@@ -233,9 +240,15 @@ impl SecurityScanner {
     }
 
     /// Scan a definition for vulnerabilities
-    fn scan_definition(&self, definition: &Definition, vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn scan_definition(
+        &self,
+        definition: &Definition,
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         match definition {
-            Definition::FunctionDef { name, body, params, .. } => {
+            Definition::FunctionDef {
+                name, body, params, ..
+            } => {
                 self.scan_function(name, body, params, vulnerabilities)?;
             }
             _ => {}
@@ -244,7 +257,13 @@ impl SecurityScanner {
     }
 
     /// Scan a function for vulnerabilities
-    fn scan_function(&self, name: &str, body: &Block, params: &[Parameter], vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn scan_function(
+        &self,
+        name: &str,
+        body: &Block,
+        params: &[Parameter],
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         // Scan function body
         self.scan_block(body, vulnerabilities)?;
 
@@ -258,7 +277,11 @@ impl SecurityScanner {
     }
 
     /// Scan a block for vulnerabilities
-    fn scan_block(&self, block: &Block, vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn scan_block(
+        &self,
+        block: &Block,
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         for statement in &block.statements {
             self.scan_statement(statement, vulnerabilities)?;
         }
@@ -266,7 +289,11 @@ impl SecurityScanner {
     }
 
     /// Scan a statement for vulnerabilities
-    fn scan_statement(&self, statement: &Statement, vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn scan_statement(
+        &self,
+        statement: &Statement,
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         match statement {
             Statement::Assignment { pattern, value, .. } => {
                 self.scan_expression(value, vulnerabilities)?;
@@ -281,14 +308,23 @@ impl SecurityScanner {
     }
 
     /// Scan an expression for vulnerabilities
-    fn scan_expression(&self, expr: &Expr, vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn scan_expression(
+        &self,
+        expr: &Expr,
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         // Pattern-based scanning
         let expr_str = format!("{:?}", expr);
-        
+
         for (vuln_type, patterns) in &self.vuln_patterns {
             for pattern in patterns {
                 if pattern.is_match(&expr_str) {
-                    self.create_vulnerability(vuln_type, expr.location().clone(), &expr_str, vulnerabilities)?;
+                    self.create_vulnerability(
+                        vuln_type,
+                        expr.location().clone(),
+                        &expr_str,
+                        vulnerabilities,
+                    )?;
                 }
             }
         }
@@ -317,16 +353,21 @@ impl SecurityScanner {
     }
 
     /// Scan function parameters for vulnerabilities
-    fn scan_parameters(&self, params: &[Parameter], vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn scan_parameters(
+        &self,
+        params: &[Parameter],
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         for param in params {
             // Check for parameters that might be used unsafely
-            if param.name.to_lowercase().contains("value") || 
-               param.name.to_lowercase().contains("amount") {
+            if param.name.to_lowercase().contains("value")
+                || param.name.to_lowercase().contains("amount")
+            {
                 self.create_vulnerability(
                     &VulnerabilityType::InputValidation,
                     param.location.clone(),
                     &format!("Parameter '{}' should be validated", param.name),
-                    vulnerabilities
+                    vulnerabilities,
                 )?;
             }
         }
@@ -334,14 +375,19 @@ impl SecurityScanner {
     }
 
     /// Check for function-specific vulnerability patterns
-    fn check_function_patterns(&self, name: &str, body: &Block, vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn check_function_patterns(
+        &self,
+        name: &str,
+        body: &Block,
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         // Check for unprotected selfdestruct
         if name.to_lowercase().contains("kill") || name.to_lowercase().contains("destroy") {
             self.create_vulnerability(
                 &VulnerabilityType::UnprotectedSelfdestruct,
                 body.location.clone(),
                 "Function that may selfdestruct should have access controls",
-                vulnerabilities
+                vulnerabilities,
             )?;
         }
 
@@ -351,7 +397,7 @@ impl SecurityScanner {
                 &VulnerabilityType::UnprotectedFallback,
                 body.location.clone(),
                 "Fallback function should have proper access controls and validation",
-                vulnerabilities
+                vulnerabilities,
             )?;
         }
 
@@ -359,19 +405,27 @@ impl SecurityScanner {
     }
 
     /// Check assignment patterns for vulnerabilities
-    fn check_assignment_patterns(&self, target: &Pattern, value: &Expr, vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
+    fn check_assignment_patterns(
+        &self,
+        target: &Pattern,
+        value: &Expr,
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
         // Check for state variable assignment patterns
         if let Pattern::Variable { name, .. } = target {
             if name.starts_with('_') || name.to_lowercase().contains("state") {
                 // This might be a state variable assignment
                 if let Expr::FunctionCall { function, .. } = value {
-                    if let Expr::Variable { name: func_name, .. } = function.as_ref() {
+                    if let Expr::Variable {
+                        name: func_name, ..
+                    } = function.as_ref()
+                    {
                         if func_name == "msg.sender" || func_name == "tx.origin" {
                             self.create_vulnerability(
                                 &VulnerabilityType::AccessControl,
                                 value.location().clone(),
                                 "State variable assignment based on msg.sender should be validated",
-                                vulnerabilities
+                                vulnerabilities,
                             )?;
                         }
                     }
@@ -383,9 +437,16 @@ impl SecurityScanner {
     }
 
     /// Create a vulnerability entry
-    fn create_vulnerability(&self, vuln_type: &VulnerabilityType, location: Location, context: &str, vulnerabilities: &mut Vec<Vulnerability>) -> Result<(), SecurityError> {
-        let (severity, description, recommendation, confidence) = self.get_vulnerability_info(vuln_type, context);
-        
+    fn create_vulnerability(
+        &self,
+        vuln_type: &VulnerabilityType,
+        location: Location,
+        context: &str,
+        vulnerabilities: &mut Vec<Vulnerability>,
+    ) -> Result<(), SecurityError> {
+        let (severity, description, recommendation, confidence) =
+            self.get_vulnerability_info(vuln_type, context);
+
         vulnerabilities.push(Vulnerability {
             vuln_type: vuln_type.clone(),
             severity,
@@ -399,7 +460,11 @@ impl SecurityScanner {
     }
 
     /// Get vulnerability information based on type
-    fn get_vulnerability_info(&self, vuln_type: &VulnerabilityType, context: &str) -> (SecuritySeverity, String, String, f64) {
+    fn get_vulnerability_info(
+        &self,
+        vuln_type: &VulnerabilityType,
+        context: &str,
+    ) -> (SecuritySeverity, String, String, f64) {
         match vuln_type {
             VulnerabilityType::IntegerOverflow => (
                 SecuritySeverity::High,
@@ -514,11 +579,10 @@ impl SecurityScanner {
             return 100.0;
         }
 
-        let weighted_score = 
-            (scan_result.critical_count * 10) +
-            (scan_result.high_count * 5) +
-            (scan_result.medium_count * 2) +
-            (scan_result.low_count * 1);
+        let weighted_score = (scan_result.critical_count * 10)
+            + (scan_result.high_count * 5)
+            + (scan_result.medium_count * 2)
+            + (scan_result.low_count * 1);
 
         let max_possible_score = 100.0;
         let score = max_possible_score - (weighted_score as f64 * 2.0);
