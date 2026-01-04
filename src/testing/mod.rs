@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use crate::runtime::env::ExecutionContext;
 use crate::runtime::metering::MeteringContext;
-use crate::runtime::storage::{StorageManager, StorageLimits};
+use crate::runtime::storage::{StorageLimits, StorageManager};
 
 /// Test case definition
 #[derive(Debug, Clone)]

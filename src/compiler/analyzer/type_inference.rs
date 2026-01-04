@@ -1,4 +1,4 @@
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap};
 use thiserror::Error;
 
 use crate::compiler::parser::ast::*;

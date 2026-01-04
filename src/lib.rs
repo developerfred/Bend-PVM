@@ -50,21 +50,21 @@ pub mod runtime {
     pub mod storage;
 }
 
-pub mod stdlib;
-pub mod testing;
-pub mod security;
 pub mod debugger;
 pub mod formatter;
 pub mod migration;
+pub mod security;
+pub mod stdlib;
+pub mod testing;
 
 use std::path::PathBuf;
 use thiserror::Error;
 
-use compiler::lexer::lexer::BendLexer;
-use compiler::parser::parser::Parser;
 use compiler::analyzer::type_checker::TypeChecker;
-use compiler::optimizer::passes::create_default_manager;
 use compiler::codegen::risc_v::RiscVCodegen;
+use compiler::lexer::lexer::BendLexer;
+use compiler::optimizer::passes::create_default_manager;
+use compiler::parser::parser::Parser;
 use compiler::polkavm::bridge::compile_to_polkavm;
 
 /// Compiler error type
@@ -154,7 +154,9 @@ pub fn compile(source_path: &PathBuf, options: CompilerOptions) -> Result<(), Co
     // Parse
     let _lexer = BendLexer::new(&source);
     let mut parser = Parser::new(&source);
-    let program = parser.parse_program().map_err(|e| CompileError::Parse(e.to_string()))?;
+    let program = parser
+        .parse_program()
+        .map_err(|e| CompileError::Parse(e.to_string()))?;
 
     // Type Check
     if options.type_check {
@@ -169,7 +171,7 @@ pub fn compile(source_path: &PathBuf, options: CompilerOptions) -> Result<(), Co
         let mut manager = create_default_manager();
         manager
             .optimize(program)
-            .map_err(|e| CompileError::Optimization(e.to_string()))? 
+            .map_err(|e| CompileError::Optimization(e.to_string()))?
     } else {
         program
     };
@@ -198,9 +200,9 @@ pub fn compile(source_path: &PathBuf, options: CompilerOptions) -> Result<(), Co
     }
 
     // Compile to PolkaVM
-    let polkavm_module = compile_to_polkavm(&code, None)
-        .map_err(|e| CompileError::PolkaVM(e.to_string()))?;
-    
+    let polkavm_module =
+        compile_to_polkavm(&code, None).map_err(|e| CompileError::PolkaVM(e.to_string()))?;
+
     // Output Binary
     let bin_path = if let Some(output) = &options.output {
         output.clone()
@@ -209,7 +211,7 @@ pub fn compile(source_path: &PathBuf, options: CompilerOptions) -> Result<(), Co
         p.set_extension("bin");
         p
     };
-    
+
     std::fs::write(bin_path, polkavm_module.binary.as_ref().unwrap())?;
 
     Ok(())
@@ -219,7 +221,82 @@ pub fn compile(source_path: &PathBuf, options: CompilerOptions) -> Result<(), Co
 pub fn parse_source(source: &str) -> Result<compiler::parser::ast::Program, CompileError> {
     let _lexer = BendLexer::new(source);
     let mut parser = Parser::new(source);
-    parser.parse_program().map_err(|e| CompileError::Parse(e.to_string()))
+    parser
+        .parse_program()
+        .map_err(|e| CompileError::Parse(e.to_string()))
+}
+
+/// Generate RISC-V instructions from a source file
+pub fn generate_riscv(
+    source_path: &PathBuf,
+    options: CompilerOptions,
+) -> Result<Vec<compiler::codegen::risc_v::Instruction>, CompileError> {
+    // Read source file
+    let source = std::fs::read_to_string(source_path)?;
+
+    // Parse
+    let _lexer = BendLexer::new(&source);
+    let mut parser = Parser::new(&source);
+    let program = parser
+        .parse_program()
+        .map_err(|e| CompileError::Parse(e.to_string()))?;
+
+    // Type Check
+    if options.type_check {
+        let mut type_checker = TypeChecker::new();
+        type_checker
+            .check_program(&program)
+            .map_err(|e| CompileError::Type(e.to_string()))?;
+    }
+
+    // Optimize
+    let optimized_program = if options.optimize {
+        let mut manager = create_default_manager();
+        manager
+            .optimize(program)
+            .map_err(|e| CompileError::Optimization(e.to_string()))?
+    } else {
+        program
+    };
+
+    // Generate Code
+    let mut generator = RiscVCodegen::new();
+    let code = generator
+        .generate(&optimized_program)
+        .map_err(|e| CompileError::Codegen(e.to_string()))?;
+
+    Ok(code)
+}
+
+/// Generate RISC-V instructions from source code string
+pub fn generate_riscv_from_source(
+    source: &str,
+    optimize: bool,
+) -> Result<Vec<compiler::codegen::risc_v::Instruction>, CompileError> {
+    // Parse
+    let _lexer = BendLexer::new(source);
+    let mut parser = Parser::new(source);
+    let program = parser
+        .parse_program()
+        .map_err(|e| CompileError::Parse(e.to_string()))?;
+
+    // Optimize (optional)
+    let optimized_program = if optimize {
+        let mut manager = create_default_manager();
+        manager
+            .optimize(program)
+            .map_err(|e| CompileError::Optimization(e.to_string()))?
+    } else {
+        program
+    };
+
+    // Generate Code
+    let mut generator = RiscVCodegen::new();
+    let code = generator
+        .generate(&optimized_program)
+        .map_err(|e| CompileError::Codegen(e.to_string()))?;
+
+    Ok(code)
 }
 
 /// Returns the current version of the compiler

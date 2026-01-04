@@ -2,8 +2,9 @@
 use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
 
-use bend_pvm::{compile, CompilerOptions};
+use bend_pvm::debugger::{DebugInfo, Debugger, DebuggerError};
 use bend_pvm::formatter::Formatter;
+use bend_pvm::{compile, generate_riscv_from_source, CompilerOptions};
 
 #[derive(Parser, Debug)]
 #[command(name = "bend-pvm")]
@@ -67,6 +68,25 @@ enum Commands {
         no_type_check: bool,
     },
 
+    /// Run a Bend source file
+    Run {
+        /// Bend source file
+        #[arg(required = true)]
+        file: PathBuf,
+
+        /// Disable optimizations
+        #[arg(short = 'O', long)]
+        no_optimize: bool,
+
+        /// Step through instructions
+        #[arg(short, long)]
+        step: bool,
+
+        /// Set initial breakpoint at line
+        #[arg(short, long)]
+        breakpoint: Option<usize>,
+    },
+
     /// Format a Bend source file
     Format {
         /// Bend source file
@@ -109,11 +129,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             no_abi,
         } => {
             // Handle auto flag behavior
-            let optimize = if cli.auto {
-                !no_optimize
-            } else {
-                !no_optimize
-            };
+            let optimize = if cli.auto { !no_optimize } else { !no_optimize };
 
             let type_check = if cli.auto {
                 !no_type_check
@@ -123,12 +139,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Determine output path if not specified
             let output = output.or_else(|| {
-                file.file_stem()
-                    .map(|stem| {
-                        let mut output = PathBuf::from(stem);
-                        output.set_extension("bin");
-                        output
-                    })
+                file.file_stem().map(|stem| {
+                    let mut output = PathBuf::from(stem);
+                    output.set_extension("bin");
+                    output
+                })
             });
 
             // Set compiler options
@@ -150,9 +165,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             compile(&file, options)?;
 
             println!("Compilation successful.");
-        },
+        }
 
-        Commands::Check { file, no_type_check } => {
+        Commands::Check {
+            file,
+            no_type_check,
+        } => {
             // Handle auto flag behavior
             let type_check = if cli.auto {
                 !no_type_check
@@ -179,10 +197,118 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             compile(&file, options)?;
 
             println!("No errors found.");
-        },
+        }
 
-        Commands::Format { file, output, check } => {
-            let formatter = Formatter::new();
+        Commands::Run {
+            file,
+            no_optimize,
+            step,
+            breakpoint,
+        } => {
+            // Read source file
+            let source = std::fs::read_to_string(&file)
+                .map_err(|e| format!("Failed to read file: {}", e))?;
+
+            // Generate RISC-V instructions
+            let optimize = !no_optimize;
+            let instructions = generate_riscv_from_source(&source, optimize)
+                .map_err(|e| format!("Failed to generate code: {}", e))?;
+
+            println!("Generated {} RISC-V instructions", instructions.len());
+
+            if instructions.is_empty() {
+                println!("No instructions generated. Make sure the source file contains a valid main function.");
+                return Ok(());
+            }
+
+            // Create debug info (basic)
+            let debug_info = DebugInfo {
+                source_path: file.clone(),
+                source_code: source.clone(),
+                line_to_instruction: std::collections::HashMap::new(),
+                instruction_to_line: std::collections::HashMap::new(),
+                locals: std::collections::HashMap::new(),
+                functions: std::collections::HashMap::new(),
+            };
+
+            // Create context with default values
+            let context = bend_pvm::runtime::env::ExecutionContext::new_default();
+
+            // Create debugger
+            let mut debugger = Debugger::new(debug_info, instructions, context);
+
+            // Set breakpoint if specified
+            if let Some(line) = breakpoint {
+                use bend_pvm::debugger::Breakpoint;
+                debugger
+                    .add_breakpoint(Breakpoint::Line(line))
+                    .map_err(|e| format!("Failed to set breakpoint: {}", e))?;
+                println!("Breakpoint set at line {}", line);
+            }
+
+            // Set event handler to print state
+            debugger.set_event_handler(|event| match event {
+                bend_pvm::debugger::DebuggerEvent::Started => {
+                    println!("Program started");
+                }
+                bend_pvm::debugger::DebuggerEvent::Stepped => {
+                    println!("Stepped");
+                }
+                bend_pvm::debugger::DebuggerEvent::Continued => {
+                    println!("Continuing...");
+                }
+                bend_pvm::debugger::DebuggerEvent::Finished => {
+                    println!("Program finished successfully");
+                }
+                bend_pvm::debugger::DebuggerEvent::Breakpoint(bp) => {
+                    println!("Breakpoint reached: {:?}", bp);
+                }
+                bend_pvm::debugger::DebuggerEvent::Crashed(msg) => {
+                    println!("Program crashed: {}", msg);
+                }
+            });
+
+            if step {
+                // Step through instructions
+                println!("Starting stepped execution...");
+                loop {
+                    match debugger.step() {
+                        Ok(()) => {
+                            // Check if program has finished
+                            if debugger.state().execution_state
+                                == bend_pvm::debugger::state::ExecutionState::Stopped
+                            {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Execution error: {}", e);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // Run to completion or breakpoint
+                println!("Running program...");
+                match debugger.run() {
+                    Ok(()) => {
+                        println!("Execution completed");
+                    }
+                    Err(e) => {
+                        return Err(format!("Execution failed: {}", e).into());
+                    }
+                }
+            }
+
+            println!("Execution finished.");
+        }
+
+        Commands::Format {
+            file,
+            output,
+            check,
+        } => {
+            let mut formatter = Formatter::new();
 
             if check {
                 // Check if file is formatted
@@ -191,16 +317,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if formatter.is_formatted(&source) {
                     println!("File is already formatted.");
-                    Ok(())
                 } else {
                     println!("File needs formatting.");
-                    Err("File is not formatted".into())
+                    return Err("File is not formatted".into());
                 }
             } else {
                 // Format the file
                 let output_path = output.as_ref().unwrap_or(&file);
 
-                if file == output_path {
+                if file == *output_path {
                     // Format in-place
                     match formatter.format_file_in_place(&file) {
                         Ok(modified) => {
@@ -226,7 +351,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Ok(bend_pvm::formatter::FormatResult::AlreadyFormatted) => {
                             println!("File is already formatted: {}", file.display());
                             // Copy file to output if different
-                            if file != output_path {
+                            if file != *output_path {
                                 std::fs::copy(&file, output_path)
                                     .map_err(|e| format!("Failed to copy file: {}", e))?;
                                 println!("Copied: {} -> {}", file.display(), output_path.display());
@@ -240,10 +365,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             eprintln!("Failed to format file: {}", e);
                             return Err(e.into());
                         }
+                        Err(e) => {
+                            eprintln!("Failed to format file: {}", e);
+                            return Err(e.into());
+                        }
                     }
                 }
             }
-        },
+        }
 
         Commands::Init { name, directory } => {
             // Determine project directory
@@ -257,12 +386,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if cli.auto {
                 // In auto mode, also initialize with default dependencies
-                println!("Auto-initializing project '{}' with default dependencies.", name);
+                println!(
+                    "Auto-initializing project '{}' with default dependencies.",
+                    name
+                );
                 // TODO: Add default dependencies to bend.toml
             }
 
             println!("Project '{}' initialized in {:?}.", name, project_dir);
-        },
+        }
     }
 
     Ok(())
@@ -273,17 +405,25 @@ fn create_project_structure(project_dir: &Path, name: &str) -> std::io::Result<(
     let main_file = project_dir.join("src").join("main.bend");
     std::fs::create_dir_all(main_file.parent().unwrap())?;
 
-    std::fs::write(&main_file, format!(r#"
+    std::fs::write(
+        &main_file,
+        format!(
+            r#"
 #{{{name}}}
 # A smart contract written in Bend-PVM.
 
 def main() -> u24:
     return 42
-"#))?;
+"#
+        ),
+    )?;
 
     // Create project configuration
     let config_file = project_dir.join("bend.toml");
-    std::fs::write(&config_file, format!(r#"
+    std::fs::write(
+        &config_file,
+        format!(
+            r#"
 [package]
 name = "{name}"
 version = "0.1.0"
@@ -291,11 +431,16 @@ authors = ["Your Name <your.email@example.com>"]
 
 [dependencies]
 # Add your dependencies here
-"#))?;
+"#
+        ),
+    )?;
 
     // Create README.md
     let readme_file = project_dir.join("README.md");
-    std::fs::write(&readme_file, format!(r#"
+    std::fs::write(
+        &readme_file,
+        format!(
+            r#"
 # {name}
 
 A smart contract written in Bend-PVM.
@@ -311,11 +456,15 @@ bend-pvm compile src/main.bend
 ```
 bend-pvm check src/main.bend
 ```
-"#))?;
+"#
+        ),
+    )?;
 
     // Create .gitignore
     let gitignore_file = project_dir.join(".gitignore");
-    std::fs::write(&gitignore_file, r#"
+    std::fs::write(
+        &gitignore_file,
+        r#"
 # Build artifacts
 *.bin
 *.s
@@ -331,7 +480,8 @@ bend-pvm check src/main.bend
 # OS files
 .DS_Store
 Thumbs.db
-"#))?;
+"#,
+    )?;
 
     Ok(())
 }

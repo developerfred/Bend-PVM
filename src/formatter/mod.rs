@@ -142,7 +142,7 @@ impl Formatter {
     }
 
     /// Check if code is already properly formatted
-    pub fn is_formatted(&self, source: &str) -> bool {
+    pub fn is_formatted(&mut self, source: &str) -> bool {
         match self.format_source(source) {
             Ok(formatted) => source.trim() == formatted.trim(),
             Err(_) => false,
@@ -151,7 +151,7 @@ impl Formatter {
 
     /// Format a file and return result
     pub fn format_file(
-        &self,
+        &mut self,
         file_path: &Path,
     ) -> Result<FormatResult, Box<dyn std::error::Error>> {
         let source = fs::read_to_string(file_path)?;
@@ -162,17 +162,14 @@ impl Formatter {
 
         let formatted = self
             .format_source(&source)
-            .map_err(|e| Box::from(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                e,
-            )))?;
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
         Ok(FormatResult::Formatted(formatted))
     }
 
     /// Format a file and write result
     pub fn format_file_in_place(
-        &self,
+        &mut self,
         file_path: &Path,
     ) -> Result<bool, Box<dyn std::error::Error>> {
         match self.format_file(file_path)? {
@@ -191,7 +188,7 @@ impl Formatter {
 
     /// Format all Bend files in a directory recursively
     pub fn format_directory(
-        &self,
+        &mut self,
         dir_path: &Path,
     ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let mut formatted_files = Vec::new();

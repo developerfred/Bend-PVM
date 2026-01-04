@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use thiserror::Error;
 
-use self::breakpoint::Breakpoint;
+pub use self::breakpoint::Breakpoint;
 use self::state::{DebuggerState, ExecutionState};
 use crate::compiler::codegen::risc_v::Instruction;
 use crate::runtime::env::{Environment, ExecutionContext};
@@ -182,6 +182,16 @@ impl Debugger {
         F: Fn(DebuggerEvent) + 'static,
     {
         self.event_handler = Some(Box::new(handler));
+    }
+
+    /// Get the current debugger state (read-only)
+    pub fn state(&self) -> &DebuggerState {
+        &self.state
+    }
+
+    /// Get a mutable reference to the debugger state
+    pub fn state_mut(&mut self) -> &mut DebuggerState {
+        &mut self.state
     }
 
     /// Add a breakpoint

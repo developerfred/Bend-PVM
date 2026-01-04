@@ -436,7 +436,6 @@ impl Random {
 
     /// Shuffle a vector randomly
     pub fn shuffle<T>(vec: &mut Vec<T>) {
-        
         let _rng = Self::rand();
         for i in (1..vec.len()).rev() {
             let j = Self::range(0, i as u128) as usize;

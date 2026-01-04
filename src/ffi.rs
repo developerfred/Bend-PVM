@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use thiserror::Error;
+use crate::stdlib::string::StringUtils;
 
 /// FFI-related errors
 #[derive(Error, Debug)]
@@ -327,6 +328,37 @@ impl FFIManager {
                 let block_number: u64 = 12345;
                 Ok(FFICallResult::Success(block_number.to_be_bytes().to_vec()))
             }
+            "string.concat" => {
+                let s1 = ABICodec::decode_value(&args[0]);
+                let s2 = ABICodec::decode_value(&args[1]);
+                Ok(FFICallResult::Success(ABICodec::encode_value(&(s1 + &s2))))
+            }
+            "string.length" => {
+                let s = ABICodec::decode_value(&args[0]);
+                let len = s.len() as u64;
+                Ok(FFICallResult::Success(len.to_be_bytes().to_vec()))
+            }
+            "string.to_uppercase" => {
+                let s = ABICodec::decode_value(&args[0]);
+                let result = StringUtils::to_uppercase(&s);
+                Ok(FFICallResult::Success(ABICodec::encode_value(&result)))
+            }
+            "string.to_lowercase" => {
+                let s = ABICodec::decode_value(&args[0]);
+                let result = StringUtils::to_lowercase(&s);
+                Ok(FFICallResult::Success(ABICodec::encode_value(&result)))
+            }
+            "string.trim" => {
+                let s = ABICodec::decode_value(&args[0]);
+                let result = StringUtils::trim(&s);
+                Ok(FFICallResult::Success(ABICodec::encode_value(&result)))
+            }
+            "string.contains" => {
+                let s = ABICodec::decode_value(&args[0]);
+                let sub = ABICodec::decode_value(&args[1]);
+                let result = if StringUtils::contains(&s, &sub) { 1u32 } else { 0u32 };
+                Ok(FFICallResult::Success(result.to_be_bytes().to_vec()))
+            }
             _ => {
                 // Generic external call simulation
                 println!("[FFI] Calling external function: {}", function_name);
@@ -378,6 +410,10 @@ pub mod ffi_functions {
         // String functions
         manager.register_builtin("string.concat", vec!["string", "string"], Some("string"))?;
         manager.register_builtin("string.length", vec!["string"], Some("uint256"))?;
+        manager.register_builtin("string.to_uppercase", vec!["string"], Some("string"))?;
+        manager.register_builtin("string.to_lowercase", vec!["string"], Some("string"))?;
+        manager.register_builtin("string.trim", vec!["string"], Some("string"))?;
+        manager.register_builtin("string.contains", vec!["string", "string"], Some("uint256"))?;
 
         Ok(())
     }
@@ -516,7 +552,9 @@ const MAX_INPUT_SIZE: usize = 65536;
 const MAX_OUTPUT_SIZE: usize = 65536;
 
 fn is_valid_function_name(name: &str) -> bool {
-    !name.is_empty() && 
-    name.len() <= 100 && 
-    name.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '.')
+    !name.is_empty()
+        && name.len() <= 100
+        && name
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '.')
 }

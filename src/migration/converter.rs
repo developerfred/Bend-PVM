@@ -44,36 +44,60 @@ impl SolidityToBendConverter {
     /// Initialize type and function mappings
     fn initialize_mappings(&mut self) {
         // Solidity type to Bend-PVM type mappings
-        self.type_mappings.insert("uint8".to_string(), "u24".to_string());
-        self.type_mappings.insert("uint16".to_string(), "u24".to_string());
-        self.type_mappings.insert("uint24".to_string(), "u24".to_string());
-        self.type_mappings.insert("uint32".to_string(), "u24".to_string());
-        self.type_mappings.insert("uint64".to_string(), "u64".to_string());
-        self.type_mappings.insert("uint128".to_string(), "u128".to_string());
-        self.type_mappings.insert("uint256".to_string(), "u256".to_string());
+        self.type_mappings
+            .insert("uint8".to_string(), "u24".to_string());
+        self.type_mappings
+            .insert("uint16".to_string(), "u24".to_string());
+        self.type_mappings
+            .insert("uint24".to_string(), "u24".to_string());
+        self.type_mappings
+            .insert("uint32".to_string(), "u24".to_string());
+        self.type_mappings
+            .insert("uint64".to_string(), "u64".to_string());
+        self.type_mappings
+            .insert("uint128".to_string(), "u128".to_string());
+        self.type_mappings
+            .insert("uint256".to_string(), "u256".to_string());
 
-        self.type_mappings.insert("int8".to_string(), "i24".to_string());
-        self.type_mappings.insert("int16".to_string(), "i24".to_string());
-        self.type_mappings.insert("int24".to_string(), "i24".to_string());
-        self.type_mappings.insert("int32".to_string(), "i24".to_string());
-        self.type_mappings.insert("int64".to_string(), "i64".to_string());
-        self.type_mappings.insert("int128".to_string(), "i128".to_string());
-        self.type_mappings.insert("int256".to_string(), "i256".to_string());
+        self.type_mappings
+            .insert("int8".to_string(), "i24".to_string());
+        self.type_mappings
+            .insert("int16".to_string(), "i24".to_string());
+        self.type_mappings
+            .insert("int24".to_string(), "i24".to_string());
+        self.type_mappings
+            .insert("int32".to_string(), "i24".to_string());
+        self.type_mappings
+            .insert("int64".to_string(), "i64".to_string());
+        self.type_mappings
+            .insert("int128".to_string(), "i128".to_string());
+        self.type_mappings
+            .insert("int256".to_string(), "i256".to_string());
 
-        self.type_mappings.insert("bool".to_string(), "Bool".to_string());
-        self.type_mappings.insert("string".to_string(), "String".to_string());
-        self.type_mappings.insert("bytes".to_string(), "Bytes".to_string());
-        self.type_mappings.insert("address".to_string(), "Address".to_string());
-        self.type_mappings.insert("address payable".to_string(), "Address".to_string());
+        self.type_mappings
+            .insert("bool".to_string(), "Bool".to_string());
+        self.type_mappings
+            .insert("string".to_string(), "String".to_string());
+        self.type_mappings
+            .insert("bytes".to_string(), "Bytes".to_string());
+        self.type_mappings
+            .insert("address".to_string(), "Address".to_string());
+        self.type_mappings
+            .insert("address payable".to_string(), "Address".to_string());
 
         // Built-in function mappings
-        self.function_mappings.insert("require".to_string(), "assert".to_string());
-        self.function_mappings.insert("revert".to_string(), "assert".to_string());
-        self.function_mappings.insert("assert".to_string(), "assert".to_string());
+        self.function_mappings
+            .insert("require".to_string(), "assert".to_string());
+        self.function_mappings
+            .insert("revert".to_string(), "assert".to_string());
+        self.function_mappings
+            .insert("assert".to_string(), "assert".to_string());
         self.function_mappings
             .insert("keccak256".to_string(), "crypto.keccak256".to_string());
-        self.function_mappings.insert("sha3".to_string(), "crypto.keccak256".to_string());
-        self.function_mappings.insert("sha256".to_string(), "crypto.sha256".to_string());
+        self.function_mappings
+            .insert("sha3".to_string(), "crypto.keccak256".to_string());
+        self.function_mappings
+            .insert("sha256".to_string(), "crypto.sha256".to_string());
         self.function_mappings
             .insert("ripemd160".to_string(), "crypto.ripemd160".to_string());
         self.function_mappings
@@ -82,21 +106,28 @@ impl SolidityToBendConverter {
             .insert("block.timestamp".to_string(), "block.timestamp".to_string());
         self.function_mappings
             .insert("block.number".to_string(), "block.height".to_string());
-        self.function_mappings.insert("msg.sender".to_string(), "ctx.caller".to_string());
-        self.function_mappings.insert("msg.value".to_string(), "ctx.value".to_string());
-        self.function_mappings.insert("msg.data".to_string(), "ctx.data".to_string());
+        self.function_mappings
+            .insert("msg.sender".to_string(), "ctx.caller".to_string());
+        self.function_mappings
+            .insert("msg.value".to_string(), "ctx.value".to_string());
+        self.function_mappings
+            .insert("msg.data".to_string(), "ctx.data".to_string());
         self.function_mappings
             .insert("tx.gasprice".to_string(), "ctx.gas_price".to_string());
         self.function_mappings
             .insert("block.coinbase".to_string(), "block.proposer".to_string());
-        self.function_mappings
-            .insert("block.difficulty".to_string(), "block.difficulty".to_string());
+        self.function_mappings.insert(
+            "block.difficulty".to_string(),
+            "block.difficulty".to_string(),
+        );
         self.function_mappings
             .insert("block.gaslimit".to_string(), "block.gas_limit".to_string());
         self.function_mappings
             .insert("block.chainid".to_string(), "block.chain_id".to_string());
-        self.function_mappings.insert("gasleft".to_string(), "ctx.gas".to_string());
-        self.function_mappings.insert("this".to_string(), "ctx.self".to_string());
+        self.function_mappings
+            .insert("gasleft".to_string(), "ctx.gas".to_string());
+        self.function_mappings
+            .insert("this".to_string(), "ctx.self".to_string());
     }
 
     /// Convert a Solidity source to Bend-PVM source
@@ -686,7 +717,11 @@ impl SolidityMigrator {
         }
 
         self.stats.contracts_processed += 1;
-        self.stats.functions_translated += source.contracts.iter().map(|c| c.functions.len()).sum::<usize>();
+        self.stats.functions_translated += source
+            .contracts
+            .iter()
+            .map(|c| c.functions.len())
+            .sum::<usize>();
 
         Ok(result)
     }
