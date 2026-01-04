@@ -19,43 +19,43 @@ pub enum MeteringError {
 pub struct GasCosts {
     /// Base cost for any execution
     pub base: u64,
-    
+
     /// Cost per byte of input data
     pub input_byte: u64,
-    
+
     /// Cost per byte of output data
     pub output_byte: u64,
-    
+
     /// Cost for a storage read
     pub storage_read: u64,
-    
+
     /// Cost for a storage write
     pub storage_write: u64,
-    
+
     /// Cost per byte of storage write
     pub storage_write_byte: u64,
-    
+
     /// Cost for a storage delete
     pub storage_delete: u64,
-    
+
     /// Cost for emitting an event
     pub event: u64,
-    
+
     /// Cost per byte of event data
     pub event_byte: u64,
-    
+
     /// Cost for a contract call
     pub call: u64,
-    
+
     /// Cost for value transfer
     pub value_transfer: u64,
-    
+
     /// Cost for memory allocation
     pub memory_alloc: u64,
-    
+
     /// Cost per byte of memory allocation
     pub memory_alloc_byte: u64,
-    
+
     /// Cost for instruction execution
     pub instruction: u64,
 }
@@ -86,43 +86,43 @@ impl Default for GasCosts {
 pub struct ProofSizeCosts {
     /// Base cost for any execution
     pub base: u64,
-    
+
     /// Cost per byte of input data
     pub input_byte: u64,
-    
+
     /// Cost per byte of output data
     pub output_byte: u64,
-    
+
     /// Cost for a storage read
     pub storage_read: u64,
-    
+
     /// Cost per byte of key in storage read
     pub storage_read_key_byte: u64,
-    
+
     /// Cost for a storage write
     pub storage_write: u64,
-    
+
     /// Cost per byte of key in storage write
     pub storage_write_key_byte: u64,
-    
+
     /// Cost per byte of value in storage write
     pub storage_write_value_byte: u64,
-    
+
     /// Cost for a storage delete
     pub storage_delete: u64,
-    
+
     /// Cost per byte of key in storage delete
     pub storage_delete_key_byte: u64,
-    
+
     /// Cost for emitting an event
     pub event: u64,
-    
+
     /// Cost per byte of event data
     pub event_byte: u64,
-    
+
     /// Cost for a contract call
     pub call: u64,
-    
+
     /// Cost for memory allocation
     pub memory_alloc: u64,
 }
@@ -167,45 +167,41 @@ impl Default for StorageDepositCosts {
 pub struct MeteringContext {
     /// Gas costs
     pub gas_costs: GasCosts,
-    
+
     /// Proof size costs
     pub proof_size_costs: ProofSizeCosts,
-    
+
     /// Storage deposit costs
     pub storage_deposit_costs: StorageDepositCosts,
-    
+
     /// Gas limit
     pub gas_limit: u64,
-    
+
     /// Current gas used
     pub gas_used: u64,
-    
+
     /// Proof size limit
     pub proof_size_limit: u64,
-    
+
     /// Current proof size used
     pub proof_size_used: u64,
-    
+
     /// Storage deposit limit
     pub storage_deposit_limit: u128,
-    
+
     /// Current storage deposit used
     pub storage_deposit_used: u128,
-    
+
     /// Instruction count
     pub instruction_count: u64,
-    
+
     /// Storage size (key -> size)
     pub storage_sizes: HashMap<Vec<u8>, usize>,
 }
 
 impl MeteringContext {
     /// Create a new metering context
-    pub fn new(
-        gas_limit: u64,
-        proof_size_limit: u64,
-        storage_deposit_limit: u128,
-    ) -> Self {
+    pub fn new(gas_limit: u64, proof_size_limit: u64, storage_deposit_limit: u128) -> Self {
         MeteringContext {
             gas_costs: GasCosts::default(),
             proof_size_costs: ProofSizeCosts::default(),
@@ -223,31 +219,61 @@ impl MeteringContext {
 
     /// Charge gas for an operation
     pub fn charge_gas(&mut self, amount: u64) -> Result<(), MeteringError> {
-        if self.gas_used + amount > self.gas_limit {
+        // SECURITY FIX: Use saturating arithmetic to prevent overflow
+        if amount > self.gas_limit.saturating_sub(self.gas_used) {
             return Err(MeteringError::OutOfGas);
         }
-        
-        self.gas_used += amount;
+        self.gas_used = self.gas_used.saturating_add(amount);
         Ok(())
     }
 
     /// Charge proof size for an operation
     pub fn charge_proof_size(&mut self, amount: u64) -> Result<(), MeteringError> {
-        if self.proof_size_used + amount > self.proof_size_limit {
+        // SECURITY FIX: Use saturating arithmetic to prevent overflow
+        if amount > self.proof_size_limit.saturating_sub(self.proof_size_used) {
             return Err(MeteringError::ProofSizeLimitExceeded);
         }
-        
-        self.proof_size_used += amount;
+        self.proof_size_used = self.proof_size_used.saturating_add(amount);
         Ok(())
     }
 
     /// Charge storage deposit for an operation
     pub fn charge_storage_deposit(&mut self, amount: u128) -> Result<(), MeteringError> {
-        if self.storage_deposit_used + amount > self.storage_deposit_limit {
+        // SECURITY FIX: Use saturating arithmetic to prevent overflow
+        if amount
+            > self
+                .storage_deposit_limit
+                .saturating_sub(self.storage_deposit_used)
+        {
             return Err(MeteringError::StorageDepositLimitExceeded);
         }
-        
-        self.storage_deposit_used += amount;
+        self.storage_deposit_used = self.storage_deposit_used.saturating_add(amount);
+        Ok(())
+    }
+
+    /// Charge proof size for an operation
+    pub fn charge_proof_size(&mut self, amount: u64) -> Result<(), MeteringError> {
+        // FIXED: Use checked arithmetic to prevent overflow
+        if amount > self.proof_size_limit.saturating_sub(self.proof_size_used) {
+            return Err(MeteringError::ProofSizeLimitExceeded);
+        }
+
+        self.proof_size_used = self.proof_size_used.saturating_add(amount);
+        Ok(())
+    }
+
+    /// Charge storage deposit for an operation
+    pub fn charge_storage_deposit(&mut self, amount: u128) -> Result<(), MeteringError> {
+        // FIXED: Use checked arithmetic to prevent overflow
+        if amount
+            > self
+                .storage_deposit_limit
+                .saturating_sub(self.storage_deposit_used)
+        {
+            return Err(MeteringError::StorageDepositLimitExceeded);
+        }
+
+        self.storage_deposit_used = self.storage_deposit_used.saturating_add(amount);
         Ok(())
     }
 
@@ -255,13 +281,13 @@ impl MeteringContext {
     pub fn charge_storage_read(&mut self, key: &[u8]) -> Result<(), MeteringError> {
         // Charge gas
         self.charge_gas(self.gas_costs.storage_read)?;
-        
+
         // Charge proof size
         self.charge_proof_size(
-            self.proof_size_costs.storage_read + 
-            (key.len() as u64 * self.proof_size_costs.storage_read_key_byte)
+            self.proof_size_costs.storage_read
+                + (key.len() as u64 * self.proof_size_costs.storage_read_key_byte),
         )?;
-        
+
         Ok(())
     }
 
@@ -269,30 +295,29 @@ impl MeteringContext {
     pub fn charge_storage_write(&mut self, key: &[u8], value: &[u8]) -> Result<(), MeteringError> {
         // Charge gas
         self.charge_gas(
-            self.gas_costs.storage_write + 
-            (value.len() as u64 * self.gas_costs.storage_write_byte)
+            self.gas_costs.storage_write + (value.len() as u64 * self.gas_costs.storage_write_byte),
         )?;
-        
+
         // Charge proof size
         self.charge_proof_size(
-            self.proof_size_costs.storage_write + 
-            (key.len() as u64 * self.proof_size_costs.storage_write_key_byte) +
-            (value.len() as u64 * self.proof_size_costs.storage_write_value_byte)
+            self.proof_size_costs.storage_write
+                + (key.len() as u64 * self.proof_size_costs.storage_write_key_byte)
+                + (value.len() as u64 * self.proof_size_costs.storage_write_value_byte),
         )?;
-        
+
         // Charge storage deposit
         let old_size = self.storage_sizes.get(key).cloned().unwrap_or(0);
         let new_size = value.len();
-        
+
         if new_size > old_size {
             // More storage is used, pay for the difference
             let deposit_amount = ((new_size - old_size) as u128) * self.storage_deposit_costs.byte;
             self.charge_storage_deposit(deposit_amount)?;
         }
-        
+
         // Update storage size
         self.storage_sizes.insert(key.to_vec(), new_size);
-        
+
         Ok(())
     }
 
@@ -300,19 +325,19 @@ impl MeteringContext {
     pub fn charge_storage_delete(&mut self, key: &[u8]) -> Result<(), MeteringError> {
         // Charge gas
         self.charge_gas(self.gas_costs.storage_delete)?;
-        
+
         // Charge proof size
         self.charge_proof_size(
-            self.proof_size_costs.storage_delete + 
-            (key.len() as u64 * self.proof_size_costs.storage_delete_key_byte)
+            self.proof_size_costs.storage_delete
+                + (key.len() as u64 * self.proof_size_costs.storage_delete_key_byte),
         )?;
-        
+
         // Refund storage deposit
         if let Some(old_size) = self.storage_sizes.remove(key) {
             let refund = (old_size as u128) * self.storage_deposit_costs.byte;
             self.storage_deposit_used = self.storage_deposit_used.saturating_sub(refund);
         }
-        
+
         Ok(())
     }
 
@@ -322,19 +347,15 @@ impl MeteringContext {
         for topic in topics {
             total_size += topic.len();
         }
-        
+
         // Charge gas
-        self.charge_gas(
-            self.gas_costs.event + 
-            (total_size as u64 * self.gas_costs.event_byte)
-        )?;
-        
+        self.charge_gas(self.gas_costs.event + (total_size as u64 * self.gas_costs.event_byte))?;
+
         // Charge proof size
         self.charge_proof_size(
-            self.proof_size_costs.event + 
-            (total_size as u64 * self.proof_size_costs.event_byte)
+            self.proof_size_costs.event + (total_size as u64 * self.proof_size_costs.event_byte),
         )?;
-        
+
         Ok(())
     }
 
@@ -342,21 +363,19 @@ impl MeteringContext {
     pub fn charge_call(&mut self, input: &[u8], value: u128) -> Result<(), MeteringError> {
         // Charge gas
         let call_gas = self.gas_costs.call + (input.len() as u64 * self.gas_costs.input_byte);
-        
+
         // Add value transfer cost if applicable
         let call_gas = if value > 0 {
             call_gas + self.gas_costs.value_transfer
         } else {
             call_gas
         };
-        
+
         self.charge_gas(call_gas)?;
-        
+
         // Charge proof size
-        self.charge_proof_size(
-            self.proof_size_costs.call
-        )?;
-        
+        self.charge_proof_size(self.proof_size_costs.call)?;
+
         Ok(())
     }
 
@@ -364,12 +383,11 @@ impl MeteringContext {
     pub fn charge_memory_alloc(&mut self, size: usize) -> Result<(), MeteringError> {
         // Charge gas
         self.charge_gas(
-            self.gas_costs.memory_alloc + 
-            (size as u64 * self.gas_costs.memory_alloc_byte)
+            self.gas_costs.memory_alloc + (size as u64 * self.gas_costs.memory_alloc_byte),
         )?;
-        
+
         // Memory allocation doesn't affect proof size or storage deposit
-        
+
         Ok(())
     }
 
@@ -377,10 +395,10 @@ impl MeteringContext {
     pub fn charge_instruction(&mut self, count: u64) -> Result<(), MeteringError> {
         // Charge gas
         self.charge_gas(count * self.gas_costs.instruction)?;
-        
+
         // Update instruction count
         self.instruction_count += count;
-        
+
         Ok(())
     }
 }
