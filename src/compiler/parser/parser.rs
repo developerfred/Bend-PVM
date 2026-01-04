@@ -291,7 +291,8 @@ impl<'a> Parser<'a> {
 
     /// Parse a top-level definition
     fn parse_definition(&mut self) -> Result<Definition, ParseError> {
-        match &self.current_token.token {
+        let token = self.current_token.token.clone();
+        match token {
             Token::Fn => self.parse_function_def(),
             Token::Type => self.parse_type_def(),
             Token::Object => self.parse_object_def(),
@@ -598,7 +599,8 @@ impl<'a> Parser<'a> {
         let start_line = self.current_token.line;
         let start_column = self.current_token.column;
 
-        match &self.current_token.token {
+        let token = self.current_token.token.clone();
+        match token {
             Token::Identifier(name) => {
                 self.advance();
 
@@ -791,7 +793,8 @@ impl<'a> Parser<'a> {
 
     /// Parse a statement
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
-        match &self.current_token.token {
+        let token = self.current_token.token.clone();
+        match token {
             Token::Return => self.parse_return_statement(),
             Token::If => self.parse_if_statement(),
             Token::Switch => self.parse_switch_statement(),
@@ -862,7 +865,7 @@ impl<'a> Parser<'a> {
         };
 
         // Parse optional type annotation
-        let ty = if self.check(&Token::Colon) {
+        let _ty = if self.check(&Token::Colon) {
             self.advance();
             Some(self.parse_type()?)
         } else {
@@ -915,7 +918,8 @@ impl<'a> Parser<'a> {
         let start_line = self.current_token.line;
         let start_column = self.current_token.column;
 
-        match &self.current_token.token {
+        let token = self.current_token.token.clone();
+        match token {
             Token::Identifier(name) => {
                 self.advance();
                 Ok(Expr::Variable {
@@ -928,10 +932,10 @@ impl<'a> Parser<'a> {
                     },
                 })
             }
-            Token::Uint(value) => {
+            Token::UintLiteral(value) => {
                 self.advance();
                 Ok(Expr::Literal {
-                    kind: LiteralKind::Uint(*value),
+                    kind: LiteralKind::Uint(value),
                     location: Location {
                         line: start_line,
                         column: start_column,
@@ -940,10 +944,10 @@ impl<'a> Parser<'a> {
                     },
                 })
             }
-            Token::Int(value) => {
+            Token::IntLiteral(value) => {
                 self.advance();
                 Ok(Expr::Literal {
-                    kind: LiteralKind::Int(*value),
+                    kind: LiteralKind::Int(value),
                     location: Location {
                         line: start_line,
                         column: start_column,
@@ -952,10 +956,10 @@ impl<'a> Parser<'a> {
                     },
                 })
             }
-            Token::Float(value) => {
+            Token::FloatLiteral(value) => {
                 self.advance();
                 Ok(Expr::Literal {
-                    kind: LiteralKind::Float(*value),
+                    kind: LiteralKind::Float(f32::from_bits(value)),
                     location: Location {
                         line: start_line,
                         column: start_column,
@@ -964,7 +968,7 @@ impl<'a> Parser<'a> {
                     },
                 })
             }
-            Token::String(value) => {
+            Token::StringLiteral(value) => {
                 self.advance();
                 Ok(Expr::Literal {
                     kind: LiteralKind::String(value.clone()),
@@ -976,10 +980,10 @@ impl<'a> Parser<'a> {
                     },
                 })
             }
-            Token::Char(value) => {
+            Token::CharLiteral(value) => {
                 self.advance();
                 Ok(Expr::Literal {
-                    kind: LiteralKind::Char(*value),
+                    kind: LiteralKind::Char(value),
                     location: Location {
                         line: start_line,
                         column: start_column,
@@ -988,7 +992,7 @@ impl<'a> Parser<'a> {
                     },
                 })
             }
-            Token::Symbol(value) => {
+            Token::SymbolLiteral(value) => {
                 self.advance();
                 Ok(Expr::Literal {
                     kind: LiteralKind::Symbol(value.clone()),
@@ -1098,63 +1102,45 @@ impl<'a> Parser<'a> {
 
     /// Parse a pattern for pattern matching
     fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
-        let start_location = self.current_token.location.clone();
+        let start_location = Location {
+            line: self.current_token.line,
+            column: self.current_token.column,
+            start: self.current_token.start,
+            end: self.current_token.end,
+        };
 
-        match &self.current_token.token {
+        let token = self.current_token.token.clone();
+        match token {
             Token::Identifier(name) => {
                 self.advance();
-                Ok(Pattern::Variable {
-                    name: name.clone(),
-                    location: start_location,
-                })
-            }
-            Token::Underscore => {
-                self.advance();
-                Ok(Pattern::Wildcard {
-                    location: start_location,
-                })
-            }
-            Token::LeftParen => {
-                self.advance();
-                let mut elements = Vec::new();
 
-                while !self.check_token(&Token::RightParen) {
-                    let element = self.parse_pattern()?;
-                    elements.push(element);
-
-                    if !self.check_token(&Token::RightParen) {
-                        self.expect_token(Token::Comma)?;
-                    }
-                }
-
-                self.expect_token(Token::RightParen)?;
-                let end_location = self.previous_token.location.clone();
-                let location = Location::span(&start_location, &end_location);
-
-                Ok(Pattern::Tuple { elements, location })
-            }
-            Token::Identifier(name) => {
-                // Could be a constructor pattern
-                self.advance();
-
-                if self.check_token(&Token::LeftBrace) {
+                if self.check(&Token::LeftBrace) {
                     // Constructor with named fields
                     self.advance();
                     let mut fields = HashMap::new();
 
-                    while !self.check_token(&Token::RightBrace) {
-                        let field_name = self.expect_identifier()?;
-                        self.expect_token(Token::Colon)?;
+                    while !self.check(&Token::RightBrace) {
+                        let field_name_token = self.expect(Token::Identifier(String::new()))?;
+                        let field_name = match &field_name_token.token {
+                            Token::Identifier(s) => s.clone(),
+                            _ => unreachable!(),
+                        };
+                        self.expect(Token::Colon)?;
                         let field_pattern = self.parse_pattern()?;
                         fields.insert(field_name, field_pattern);
 
-                        if !self.check_token(&Token::RightBrace) {
-                            self.expect_token(Token::Comma)?;
+                        if !self.check(&Token::RightBrace) {
+                            self.expect(Token::Comma)?;
                         }
                     }
 
-                    self.expect_token(Token::RightBrace)?;
-                    let end_location = self.previous_token.location.clone();
+                    self.expect(Token::RightBrace)?;
+                    let end_location = Location {
+                        line: self.current_token.line,
+                        column: self.current_token.column,
+                        start: self.current_token.start,
+                        end: self.current_token.end,
+                    };
                     let location = Location::span(&start_location, &end_location);
 
                     Ok(Pattern::Constructor {
@@ -1169,6 +1155,36 @@ impl<'a> Parser<'a> {
                         location: start_location,
                     })
                 }
+            }
+            Token::Underscore => {
+                self.advance();
+                Ok(Pattern::Wildcard {
+                    location: start_location,
+                })
+            }
+            Token::LeftParen => {
+                self.advance();
+                let mut elements = Vec::new();
+
+                while !self.check(&Token::RightParen) {
+                    let element = self.parse_pattern()?;
+                    elements.push(element);
+
+                    if !self.check(&Token::RightParen) {
+                        self.expect(Token::Comma)?;
+                    }
+                }
+
+                self.expect(Token::RightParen)?;
+                let end_location = Location {
+                    line: self.current_token.line,
+                    column: self.current_token.column,
+                    start: self.current_token.start,
+                    end: self.current_token.end,
+                };
+                let location = Location::span(&start_location, &end_location);
+
+                Ok(Pattern::Tuple { elements, location })
             }
             _ => {
                 // Try to parse as a literal pattern

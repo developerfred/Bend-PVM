@@ -181,6 +181,7 @@ pub enum Instruction {
     BranchEq(Register, Register, String), // Branch if equal, e.g., beq rs1, rs2, label
     BranchNe(Register, Register, String), // Branch if not equal, e.g., bne rs1, rs2, label
     BranchLt(Register, Register, String), // Branch if less than, e.g., blt rs1, rs2, label
+    BranchLe(Register, Register, String), // Branch if less than or equal, e.g., ble rs1, rs2, label
     BranchGe(Register, Register, String), // Branch if greater than or equal, e.g., bge rs1, rs2, label
     BranchLtU(Register, Register, String), // Branch if less than (unsigned), e.g., bltu rs1, rs2, label
     BranchGeU(Register, Register, String), // Branch if greater than or equal (unsigned), e.g., bgeu rs1, rs2, label
@@ -449,6 +450,15 @@ impl std::fmt::Display for Instruction {
                 write!(
                     f,
                     "    blt {}, {}, {}",
+                    rs1.to_string(),
+                    rs2.to_string(),
+                    label
+                )
+            }
+            Instruction::BranchLe(rs1, rs2, label) => {
+                write!(
+                    f,
+                    "    ble {}, {}, {}",
                     rs1.to_string(),
                     rs2.to_string(),
                     label
