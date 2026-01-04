@@ -1,18 +1,31 @@
-use std::error::Error;
-use std::fs;
-use std::path::Path;
-
 use lsp_server::{Connection, Message, Notification, Request, RequestId, Response};
 use lsp_types::notification::{
-    DidChangeTextDocument, DidOpenTextDocument, Notification as _, PublishDiagnostics,
+    DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, Notification as _,
+    PublishDiagnostics,
 };
 use lsp_types::*;
 use serde_json::Value;
+use std::error::Error;
+use std::fs;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use bend_pvm::compiler::parser::{
     ast::{Definition, Expr, Location as AstLocation, LocationProvider, Program, Statement},
     parser::{ParseError, Parser},
 };
+
+// PERFORMANCE: Document cache with TTL for faster response times
+type DocumentCache = Arc<Mutex<lru_time_cache::LruCache<Url, (Program, Instant)>>>;
+
+// PERFORMANCE: Track parse times for monitoring
+type ParseMetrics = Arc<Mutex<Vec<Duration>>>;
+
+// PERFORMANCE: Configuration for caching and timeouts
+const CACHE_TTL_SECONDS: u64 = 300; // 5 minutes cache TTL
+const MAX_CACHE_SIZE: usize = 100; // Max documents in cache
+const PARSE_TIMEOUT_MS: u64 = 5000; // 5 second timeout for parsing
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     let (connection, io_threads) = Connection::stdio();
