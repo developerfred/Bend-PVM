@@ -1,0 +1,10 @@
+/Volumes/Codingsh/bend-pvm-ecossystem/bend-pvm/target/debug/deps/lsp_server-8c3175657e386a1e.d: /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/lib.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/error.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/msg.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/req_queue.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/socket.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/stdio.rs
+
+/Volumes/Codingsh/bend-pvm-ecossystem/bend-pvm/target/debug/deps/liblsp_server-8c3175657e386a1e.rmeta: /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/lib.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/error.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/msg.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/req_queue.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/socket.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/stdio.rs
+
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/lib.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/error.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/msg.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/req_queue.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/socket.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/lsp-server-0.7.9/src/stdio.rs:

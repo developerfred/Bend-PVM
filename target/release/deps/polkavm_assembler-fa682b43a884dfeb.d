@@ -1,0 +1,10 @@
+/Volumes/Codingsh/bend-pvm-ecossystem/bend-pvm/target/release/deps/polkavm_assembler-fa682b43a884dfeb.d: /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/lib.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/amd64.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/assembler.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/../README.md
+
+/Volumes/Codingsh/bend-pvm-ecossystem/bend-pvm/target/release/deps/libpolkavm_assembler-fa682b43a884dfeb.rlib: /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/lib.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/amd64.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/assembler.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/../README.md
+
+/Volumes/Codingsh/bend-pvm-ecossystem/bend-pvm/target/release/deps/libpolkavm_assembler-fa682b43a884dfeb.rmeta: /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/lib.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/amd64.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/assembler.rs /Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/../README.md
+
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/lib.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/amd64.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/assembler.rs:
+/Users/fredericksilva/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/polkavm-assembler-0.1.1/src/../README.md:

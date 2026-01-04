@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AstValidationError","BinaryOperator","Definition","Expr","Import","InPlaceOperator","LiteralKind","Pattern","Statement","Type"],"struct":["AstValidator","BasicAstVisitor","Block","Field","ImportName","Location","MatchCase","Parameter","Program","SwitchCase","TypeBound","TypeVariant"],"trait":["AstVisitor","LocationProvider"]};

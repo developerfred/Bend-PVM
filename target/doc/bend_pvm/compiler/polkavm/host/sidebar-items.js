@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["HostFunction"],"fn":["generate_abi_helpers","generate_host_bindings","generate_prelude"]};

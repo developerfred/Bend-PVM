@@ -167,6 +167,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 assembly,
                 metadata: !no_metadata,
                 abi: !no_abi,
+                security_scan: true,
+                static_analysis: true,
+                fuzz_testing: false,
+                security_level: 2,
             };
             
             // Compile the file
@@ -193,6 +197,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 assembly: false,
                 metadata: false,
                 abi: false,
+                security_scan: true,
+                static_analysis: true,
+                fuzz_testing: false,
+                security_level: 2,
             };
             
             // Check the file

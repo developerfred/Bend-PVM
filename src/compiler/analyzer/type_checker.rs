@@ -7,14 +7,14 @@ use crate::compiler::parser::ast::*;
 pub enum TypeError {
     #[error("Type error: {0}")]
     Generic(String),
-    
+
     #[error("Undefined variable '{name}' at line {line}, column {column}")]
     UndefinedVariable {
         name: String,
         line: usize,
         column: usize,
     },
-    
+
     #[error("Type mismatch: expected {expected}, found {found} at line {line}, column {column}")]
     TypeMismatch {
         expected: String,
@@ -22,22 +22,24 @@ pub enum TypeError {
         line: usize,
         column: usize,
     },
-    
+
     #[error("Undefined type '{name}' at line {line}, column {column}")]
     UndefinedType {
         name: String,
         line: usize,
         column: usize,
     },
-    
+
     #[error("Undefined constructor '{name}' at line {line}, column {column}")]
     UndefinedConstructor {
         name: String,
         line: usize,
         column: usize,
     },
-    
-    #[error("Incompatible types for operation: {left} {op} {right} at line {line}, column {column}")]
+
+    #[error(
+        "Incompatible types for operation: {left} {op} {right} at line {line}, column {column}"
+    )]
     IncompatibleOperation {
         left: String,
         op: String,
@@ -106,7 +108,7 @@ impl std::fmt::Display for TypeInfo {
 pub enum Symbol {
     Variable(TypeInfo),
     Function(TypeInfo),
-    Type(Vec<String>), // Type parameters
+    Type(Vec<String>),             // Type parameters
     Constructor(String, TypeInfo), // Type name, constructor type
 }
 
@@ -114,16 +116,16 @@ pub enum Symbol {
 pub struct TypeChecker {
     /// Symbol table for variables, functions, types, and constructors
     symbols: HashMap<String, Symbol>,
-    
+
     /// Type definitions
     types: HashMap<String, Vec<TypeVariant>>,
-    
+
     /// Type parameters for generic types
     type_params: HashMap<String, HashSet<String>>,
-    
+
     /// Check for cyclic type definitions
     visited_types: HashSet<String>,
-    
+
     /// Track function return types for checking
     current_function_return_type: Option<TypeInfo>,
 }
@@ -137,13 +139,13 @@ impl TypeChecker {
             visited_types: HashSet::new(),
             current_function_return_type: None,
         };
-        
+
         // Add built-in types and functions
         checker.add_builtin_types();
-        
+
         checker
     }
-    
+
     /// Add built-in types and functions to the environment
     fn add_builtin_types(&mut self) {
         // Basic types
@@ -151,127 +153,174 @@ impl TypeChecker {
         self.symbols.insert("i24".to_string(), Symbol::Type(vec![]));
         self.symbols.insert("f24".to_string(), Symbol::Type(vec![]));
         self.symbols.insert("Any".to_string(), Symbol::Type(vec![]));
-        self.symbols.insert("None".to_string(), Symbol::Type(vec![]));
-        
+        self.symbols
+            .insert("None".to_string(), Symbol::Type(vec![]));
+
         // Common generic types
-        self.symbols.insert("List".to_string(), Symbol::Type(vec!["T".to_string()]));
-        self.type_params.insert("List".to_string(), 
-            vec!["T".to_string()].into_iter().collect());
-            
-        self.symbols.insert("Option".to_string(), Symbol::Type(vec!["T".to_string()]));
-        self.type_params.insert("Option".to_string(), 
-            vec!["T".to_string()].into_iter().collect());
-            
-        self.symbols.insert("Result".to_string(), Symbol::Type(vec!["T".to_string(), "E".to_string()]));
-        self.type_params.insert("Result".to_string(), 
-            vec!["T".to_string(), "E".to_string()].into_iter().collect());
-            
-        self.symbols.insert("Tree".to_string(), Symbol::Type(vec!["T".to_string()]));
-        self.type_params.insert("Tree".to_string(), 
-            vec!["T".to_string()].into_iter().collect());
-            
-        // Some common constructors
-        self.symbols.insert("List/Nil".to_string(), 
-            Symbol::Constructor(
-                "List".to_string(), 
-                TypeInfo::Named("List".to_string(), vec![TypeInfo::Unknown])
-            )
+        self.symbols
+            .insert("List".to_string(), Symbol::Type(vec!["T".to_string()]));
+        self.type_params.insert(
+            "List".to_string(),
+            vec!["T".to_string()].into_iter().collect(),
         );
-        
-        self.symbols.insert("List/Cons".to_string(), 
+
+        self.symbols
+            .insert("Option".to_string(), Symbol::Type(vec!["T".to_string()]));
+        self.type_params.insert(
+            "Option".to_string(),
+            vec!["T".to_string()].into_iter().collect(),
+        );
+
+        self.symbols.insert(
+            "Result".to_string(),
+            Symbol::Type(vec!["T".to_string(), "E".to_string()]),
+        );
+        self.type_params.insert(
+            "Result".to_string(),
+            vec!["T".to_string(), "E".to_string()].into_iter().collect(),
+        );
+
+        self.symbols
+            .insert("Tree".to_string(), Symbol::Type(vec!["T".to_string()]));
+        self.type_params.insert(
+            "Tree".to_string(),
+            vec!["T".to_string()].into_iter().collect(),
+        );
+
+        // Some common constructors
+        self.symbols.insert(
+            "List/Nil".to_string(),
             Symbol::Constructor(
-                "List".to_string(), 
+                "List".to_string(),
+                TypeInfo::Named("List".to_string(), vec![TypeInfo::Unknown]),
+            ),
+        );
+
+        self.symbols.insert(
+            "List/Cons".to_string(),
+            Symbol::Constructor(
+                "List".to_string(),
                 TypeInfo::Function(
                     Box::new(TypeInfo::Unknown), // head: T
                     Box::new(TypeInfo::Function(
                         Box::new(TypeInfo::Named("List".to_string(), vec![TypeInfo::Unknown])), // tail: List<T>
-                        Box::new(TypeInfo::Named("List".to_string(), vec![TypeInfo::Unknown])) // return: List<T>
-                    ))
-                )
-            )
+                        Box::new(TypeInfo::Named("List".to_string(), vec![TypeInfo::Unknown])), // return: List<T>
+                    )),
+                ),
+            ),
         );
-        
+
         // Add more built-in types and constructors as needed
     }
-    
+
     /// Type check a program
     pub fn check_program(&mut self, program: &Program) -> Result<(), TypeError> {
         // First pass: collect all type definitions
         for definition in &program.definitions {
             match definition {
-                Definition::TypeDef { name, type_params, variants, .. } => {
+                Definition::TypeDef {
+                    name,
+                    type_params,
+                    variants,
+                    ..
+                } => {
                     let params = type_params.clone();
-                    self.symbols.insert(name.clone(), Symbol::Type(params.clone()));
+                    self.symbols
+                        .insert(name.clone(), Symbol::Type(params.clone()));
                     self.types.insert(name.clone(), variants.clone());
-                    
+
                     // Add type parameters
                     let param_set: HashSet<String> = params.into_iter().collect();
                     self.type_params.insert(name.clone(), param_set);
-                    
+
                     // Add constructors
                     for variant in variants {
                         let constructor_name = format!("{}/{}", name, variant.name);
-                        let constructor_type = self.variant_to_type_info(name, type_params, variant)?;
-                        self.symbols.insert(constructor_name, Symbol::Constructor(name.clone(), constructor_type));
+                        let constructor_type =
+                            self.variant_to_type_info(name, type_params, variant)?;
+                        self.symbols.insert(
+                            constructor_name,
+                            Symbol::Constructor(name.clone(), constructor_type),
+                        );
                     }
-                },
-                Definition::ObjectDef { name, type_params, fields, .. } => {
+                }
+                Definition::ObjectDef {
+                    name,
+                    type_params,
+                    fields,
+                    ..
+                } => {
                     let params = type_params.clone();
-                    self.symbols.insert(name.clone(), Symbol::Type(params.clone()));
-                    
+                    self.symbols
+                        .insert(name.clone(), Symbol::Type(params.clone()));
+
                     // Create a single variant for the object
                     let mut object_variant = TypeVariant {
                         name: name.clone(),
                         fields: fields.clone(),
                         location: definition.location().clone(),
                     };
-                    
-                    self.types.insert(name.clone(), vec![object_variant.clone()]);
-                    
+
+                    self.types
+                        .insert(name.clone(), vec![object_variant.clone()]);
+
                     // Add type parameters
                     let param_set: HashSet<String> = params.into_iter().collect();
                     self.type_params.insert(name.clone(), param_set);
-                    
+
                     // Add constructor
                     let constructor_name = name.clone();
-                    let constructor_type = self.variant_to_type_info(name, type_params, &object_variant)?;
-                    self.symbols.insert(constructor_name, Symbol::Constructor(name.clone(), constructor_type));
-                },
-                _ => {},
+                    let constructor_type =
+                        self.variant_to_type_info(name, type_params, &object_variant)?;
+                    self.symbols.insert(
+                        constructor_name,
+                        Symbol::Constructor(name.clone(), constructor_type),
+                    );
+                }
+                _ => {}
             }
         }
-        
+
         // Second pass: type check function definitions
         for definition in &program.definitions {
             match definition {
-                Definition::FunctionDef { name, params, return_type, body, checked, .. } => {
+                Definition::FunctionDef {
+                    name,
+                    params,
+                    return_type,
+                    body,
+                    checked,
+                    ..
+                } => {
                     // Skip type checking for unchecked functions
                     if let Some(false) = checked {
                         continue;
                     }
-                    
+
                     // Create a new scope for the function
                     let mut checker = self.new_scope();
-                    
+
                     // Add parameters to the scope
                     let mut param_types = Vec::new();
                     for param in params {
                         let param_type = checker.ast_type_to_type_info(&param.ty)?;
-                        
-                        checker.symbols.insert(param.name.clone(), Symbol::Variable(param_type.clone()));
+
+                        checker
+                            .symbols
+                            .insert(param.name.clone(), Symbol::Variable(param_type.clone()));
                         param_types.push(param_type);
                     }
-                    
+
                     // Set the current function return type
                     checker.current_function_return_type = if let Some(ret_type) = return_type {
                         Some(checker.ast_type_to_type_info(ret_type)?)
                     } else {
                         Some(TypeInfo::Any)
                     };
-                    
+
                     // Type check the function body
                     let inferred_return_type = checker.check_block(body)?;
-                    
+
                     // Check if the inferred return type matches the annotated return type
                     if let Some(ret_type) = &checker.current_function_return_type {
                         if !checker.is_compatible(ret_type, &inferred_return_type)? {
@@ -283,31 +332,32 @@ impl TypeChecker {
                             });
                         }
                     }
-                    
+
                     // Construct the function type
                     let function_type = if params.is_empty() {
                         inferred_return_type.clone()
                     } else {
                         let mut fn_type = inferred_return_type.clone();
-                        
+
                         // Build the function type from right to left
                         for param_type in param_types.into_iter().rev() {
                             fn_type = TypeInfo::Function(Box::new(param_type), Box::new(fn_type));
                         }
-                        
+
                         fn_type
                     };
-                    
+
                     // Add the function to the symbol table
-                    self.symbols.insert(name.clone(), Symbol::Function(function_type));
-                },
-                _ => {},
+                    self.symbols
+                        .insert(name.clone(), Symbol::Function(function_type));
+                }
+                _ => {}
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Create a new scope with inherited symbols and type definitions
     fn new_scope(&self) -> TypeChecker {
         TypeChecker {
@@ -318,19 +368,26 @@ impl TypeChecker {
             current_function_return_type: self.current_function_return_type.clone(),
         }
     }
-    
+
     /// Convert a type variant to a type info
-    fn variant_to_type_info(&self, type_name: &str, type_params: &[String], variant: &TypeVariant) -> Result<TypeInfo, TypeError> {
+    fn variant_to_type_info(
+        &self,
+        type_name: &str,
+        type_params: &[String],
+        variant: &TypeVariant,
+    ) -> Result<TypeInfo, TypeError> {
         // Create a map of type parameters to Unknown types
         let mut type_param_map = HashMap::new();
         for param in type_params {
             type_param_map.insert(param.clone(), TypeInfo::Unknown);
         }
-        
+
         // Build the constructor type from right to left
-        let mut constructor_type = TypeInfo::Named(type_name.to_string(), 
-            type_params.iter().map(|_| TypeInfo::Unknown).collect());
-        
+        let mut constructor_type = TypeInfo::Named(
+            type_name.to_string(),
+            type_params.iter().map(|_| TypeInfo::Unknown).collect(),
+        );
+
         // Add fields from right to left
         for field in variant.fields.iter().rev() {
             let field_type = if let Some(type_annotation) = &field.type_annotation {
@@ -338,20 +395,21 @@ impl TypeChecker {
             } else {
                 TypeInfo::Any
             };
-            
-            constructor_type = TypeInfo::Function(
-                Box::new(field_type),
-                Box::new(constructor_type),
-            );
+
+            constructor_type = TypeInfo::Function(Box::new(field_type), Box::new(constructor_type));
         }
-        
+
         Ok(constructor_type)
     }
-    
+
     /// Convert AST type to TypeInfo
     fn ast_type_to_type_info(&self, ast_type: &Type) -> Result<TypeInfo, TypeError> {
         match ast_type {
-            Type::Named { name, params, location } => {
+            Type::Named {
+                name,
+                params,
+                location,
+            } => {
                 match name.as_str() {
                     "u24" => Ok(TypeInfo::U24),
                     "i24" => Ok(TypeInfo::I24),
@@ -368,55 +426,70 @@ impl TypeChecker {
                                 column: location.column,
                             });
                         }
-                        
+
                         // Check if the type parameters match
                         if let Some(param_set) = self.type_params.get(name) {
                             if params.len() != param_set.len() {
                                 return Err(TypeError::TypeMismatch {
-                                    expected: format!("{} with {} type parameters", name, param_set.len()),
-                                    found: format!("{} with {} type parameters", name, params.len()),
+                                    expected: format!(
+                                        "{} with {} type parameters",
+                                        name,
+                                        param_set.len()
+                                    ),
+                                    found: format!(
+                                        "{} with {} type parameters",
+                                        name,
+                                        params.len()
+                                    ),
                                     line: location.line,
                                     column: location.column,
                                 });
                             }
-                            
+
                             // Convert the type parameters
                             let mut param_types = Vec::new();
                             for param in params {
                                 param_types.push(self.ast_type_to_type_info(param)?);
                             }
-                            
+
                             Ok(TypeInfo::Named(name.clone(), param_types))
                         } else {
                             // Non-generic type shouldn't have parameters
                             if !params.is_empty() {
                                 return Err(TypeError::TypeMismatch {
                                     expected: format!("{} with no type parameters", name),
-                                    found: format!("{} with {} type parameters", name, params.len()),
+                                    found: format!(
+                                        "{} with {} type parameters",
+                                        name,
+                                        params.len()
+                                    ),
                                     line: location.line,
                                     column: location.column,
                                 });
                             }
-                            
+
                             Ok(TypeInfo::Named(name.clone(), vec![]))
                         }
                     }
                 }
-            },
+            }
             Type::Function { param, result, .. } => {
                 let param_type = self.ast_type_to_type_info(param)?;
                 let result_type = self.ast_type_to_type_info(result)?;
-                
-                Ok(TypeInfo::Function(Box::new(param_type), Box::new(result_type)))
-            },
+
+                Ok(TypeInfo::Function(
+                    Box::new(param_type),
+                    Box::new(result_type),
+                ))
+            }
             Type::Tuple { elements, .. } => {
                 let mut element_types = Vec::new();
                 for element in elements {
                     element_types.push(self.ast_type_to_type_info(element)?);
                 }
-                
+
                 Ok(TypeInfo::Tuple(element_types))
-            },
+            }
             Type::Any { .. } => Ok(TypeInfo::Any),
             Type::None { .. } => Ok(TypeInfo::None),
             Type::Hole { .. } => Ok(TypeInfo::Unknown),
@@ -424,13 +497,24 @@ impl TypeChecker {
             Type::I24 { .. } => Ok(TypeInfo::I24),
             Type::F24 { .. } => Ok(TypeInfo::F24),
             Type::Unknown { .. } => Ok(TypeInfo::Unknown),
+            Type::Generic { .. } => Ok(TypeInfo::Unknown),
+            Type::Constrained { .. } => Ok(TypeInfo::Unknown),
+            Type::Effect { .. } => Ok(TypeInfo::Unknown),
         }
     }
-    
+
     /// Convert AST type to TypeInfo with type parameters
-    fn ast_type_to_type_info_with_params(&self, ast_type: &Type, type_param_map: &HashMap<String, TypeInfo>) -> Result<TypeInfo, TypeError> {
+    fn ast_type_to_type_info_with_params(
+        &self,
+        ast_type: &Type,
+        type_param_map: &HashMap<String, TypeInfo>,
+    ) -> Result<TypeInfo, TypeError> {
         match ast_type {
-            Type::Named { name, params, location } => {
+            Type::Named {
+                name,
+                params,
+                location,
+            } => {
                 // Check if it's a type parameter
                 if let Some(param_type) = type_param_map.get(name) {
                     if !params.is_empty() {
@@ -441,35 +525,35 @@ impl TypeChecker {
                             column: location.column,
                         });
                     }
-                    
+
                     return Ok(param_type.clone());
                 }
-                
+
                 // Otherwise, proceed as normal
                 self.ast_type_to_type_info(ast_type)
-            },
+            }
             // Other cases same as ast_type_to_type_info
             _ => self.ast_type_to_type_info(ast_type),
         }
     }
-    
+
     /// Type check a block
     fn check_block(&mut self, block: &Block) -> Result<TypeInfo, TypeError> {
         let mut result_type = TypeInfo::None;
-        
+
         for statement in &block.statements {
             result_type = self.check_statement(statement)?;
         }
-        
+
         Ok(result_type)
     }
-    
+
     /// Type check a statement
     fn check_statement(&mut self, statement: &Statement) -> Result<TypeInfo, TypeError> {
         match statement {
             Statement::Return { value, .. } => {
                 let value_type = self.check_expr(value)?;
-                
+
                 if let Some(ret_type) = &self.current_function_return_type {
                     if !self.is_compatible(ret_type, &value_type)? {
                         return Err(TypeError::TypeMismatch {
@@ -480,28 +564,35 @@ impl TypeChecker {
                         });
                     }
                 }
-                
+
                 Ok(value_type)
-            },
+            }
             Statement::Assignment { pattern, value, .. } => {
                 let value_type = self.check_expr(value)?;
                 self.check_pattern(pattern, &value_type)?;
                 Ok(TypeInfo::None)
-            },
+            }
             // Add type checking for other statement types
             // For brevity, we're not implementing all statement types here
-            _ => Err(TypeError::Generic(format!("Type checking not implemented for this statement type yet"))),
+            _ => Err(TypeError::Generic(format!(
+                "Type checking not implemented for this statement type yet"
+            ))),
         }
     }
-    
+
     /// Type check a pattern
-    fn check_pattern(&mut self, pattern: &Pattern, expected_type: &TypeInfo) -> Result<(), TypeError> {
+    fn check_pattern(
+        &mut self,
+        pattern: &Pattern,
+        expected_type: &TypeInfo,
+    ) -> Result<(), TypeError> {
         match pattern {
             Pattern::Variable { name, location } => {
                 // Add the variable to the symbol table with the expected type
-                self.symbols.insert(name.clone(), Symbol::Variable(expected_type.clone()));
+                self.symbols
+                    .insert(name.clone(), Symbol::Variable(expected_type.clone()));
                 Ok(())
-            },
+            }
             Pattern::Tuple { elements, location } => {
                 // Check if the expected type is a tuple with the same number of elements
                 match expected_type {
@@ -514,22 +605,22 @@ impl TypeChecker {
                                 column: location.column,
                             });
                         }
-                        
+
                         // Check each element
                         for (element, element_type) in elements.iter().zip(element_types.iter()) {
                             self.check_pattern(element, element_type)?;
                         }
-                        
+
                         Ok(())
-                    },
+                    }
                     TypeInfo::Any => {
                         // Assume the tuple has the right structure
                         for element in elements {
                             self.check_pattern(element, &TypeInfo::Any)?;
                         }
-                        
+
                         Ok(())
-                    },
+                    }
                     _ => Err(TypeError::TypeMismatch {
                         expected: "tuple".to_string(),
                         found: expected_type.to_string(),
@@ -537,13 +628,15 @@ impl TypeChecker {
                         column: location.column,
                     }),
                 }
-            },
+            }
             // Add type checking for other pattern types
             // For brevity, we're not implementing all pattern types here
-            _ => Err(TypeError::Generic(format!("Type checking not implemented for this pattern type yet"))),
+            _ => Err(TypeError::Generic(format!(
+                "Type checking not implemented for this pattern type yet"
+            ))),
         }
     }
-    
+
     /// Type check an expression
     fn check_expr(&mut self, expr: &Expr) -> Result<TypeInfo, TypeError> {
         match expr {
@@ -567,25 +660,23 @@ impl TypeChecker {
                         column: location.column,
                     })
                 }
-            },
-            Expr::Literal { kind, location } => {
-                match kind {
-                    LiteralKind::Uint(_) => Ok(TypeInfo::U24),
-                    LiteralKind::Int(_) => Ok(TypeInfo::I24),
-                    LiteralKind::Float(_) => Ok(TypeInfo::F24),
-                    LiteralKind::String(_) => Ok(TypeInfo::Named("String".to_string(), vec![])),
-                    LiteralKind::Char(_) => Ok(TypeInfo::U24),
-                    LiteralKind::Symbol(_) => Ok(TypeInfo::U24),
-                }
+            }
+            Expr::Literal { kind, location } => match kind {
+                LiteralKind::Uint(_) => Ok(TypeInfo::U24),
+                LiteralKind::Int(_) => Ok(TypeInfo::I24),
+                LiteralKind::Float(_) => Ok(TypeInfo::F24),
+                LiteralKind::String(_) => Ok(TypeInfo::Named("String".to_string(), vec![])),
+                LiteralKind::Char(_) => Ok(TypeInfo::U24),
+                LiteralKind::Symbol(_) => Ok(TypeInfo::U24),
             },
             Expr::Tuple { elements, location } => {
                 let mut element_types = Vec::new();
                 for element in elements {
                     element_types.push(self.check_expr(element)?);
                 }
-                
+
                 Ok(TypeInfo::Tuple(element_types))
-            },
+            }
             Expr::List { elements, location } => {
                 // Infer the element type from the first element, or use Any if empty
                 let element_type = if let Some(first) = elements.first() {
@@ -593,7 +684,7 @@ impl TypeChecker {
                 } else {
                     TypeInfo::Any
                 };
-                
+
                 // Check that all elements have the same type
                 for element in elements {
                     let current_type = self.check_expr(element)?;
@@ -606,12 +697,17 @@ impl TypeChecker {
                         });
                     }
                 }
-                
+
                 Ok(TypeInfo::Named("List".to_string(), vec![element_type]))
-            },
-            Expr::FunctionCall { function, args, named_args, location } => {
+            }
+            Expr::FunctionCall {
+                function,
+                args,
+                named_args,
+                location,
+            } => {
                 let function_type = self.check_expr(function)?;
-                
+
                 // Check if the function type is a function
                 match function_type {
                     TypeInfo::Function(param_type, result_type) => {
@@ -624,7 +720,7 @@ impl TypeChecker {
                                 column: location.column,
                             });
                         }
-                        
+
                         let arg_type = self.check_expr(&args[0])?;
                         if !self.is_compatible(&param_type, &arg_type)? {
                             return Err(TypeError::TypeMismatch {
@@ -634,13 +730,13 @@ impl TypeChecker {
                                 column: args[0].location().column,
                             });
                         }
-                        
+
                         Ok(*result_type)
-                    },
+                    }
                     TypeInfo::Any => {
                         // Any can be called with any arguments
                         Ok(TypeInfo::Any)
-                    },
+                    }
                     _ => Err(TypeError::TypeMismatch {
                         expected: "function".to_string(),
                         found: function_type.to_string(),
@@ -648,14 +744,23 @@ impl TypeChecker {
                         column: function.location().column,
                     }),
                 }
-            },
-            Expr::BinaryOp { left, operator, right, location } => {
+            }
+            Expr::BinaryOp {
+                left,
+                operator,
+                right,
+                location,
+            } => {
                 let left_type = self.check_expr(left)?;
                 let right_type = self.check_expr(right)?;
-                
+
                 // Check operator compatibility
                 match operator {
-                    BinaryOperator::Add | BinaryOperator::Sub | BinaryOperator::Mul | BinaryOperator::Div | BinaryOperator::Mod => {
+                    BinaryOperator::Add
+                    | BinaryOperator::Sub
+                    | BinaryOperator::Mul
+                    | BinaryOperator::Div
+                    | BinaryOperator::Mod => {
                         // Numeric operations
                         if !self.is_numeric(&left_type)? || !self.is_numeric(&right_type)? {
                             return Err(TypeError::IncompatibleOperation {
@@ -666,7 +771,7 @@ impl TypeChecker {
                                 column: location.column,
                             });
                         }
-                        
+
                         // Check numeric type compatibility
                         if !self.is_compatible(&left_type, &right_type)? {
                             return Err(TypeError::TypeMismatch {
@@ -676,11 +781,16 @@ impl TypeChecker {
                                 column: right.location().column,
                             });
                         }
-                        
+
                         // Result has the same type as the operands
                         Ok(left_type)
-                    },
-                    BinaryOperator::Equal | BinaryOperator::NotEqual | BinaryOperator::Less | BinaryOperator::LessEqual | BinaryOperator::Greater | BinaryOperator::GreaterEqual => {
+                    }
+                    BinaryOperator::Equal
+                    | BinaryOperator::NotEqual
+                    | BinaryOperator::Less
+                    | BinaryOperator::LessEqual
+                    | BinaryOperator::Greater
+                    | BinaryOperator::GreaterEqual => {
                         // Comparison operations
                         if !self.is_compatible(&left_type, &right_type)? {
                             return Err(TypeError::TypeMismatch {
@@ -690,10 +800,10 @@ impl TypeChecker {
                                 column: right.location().column,
                             });
                         }
-                        
+
                         // Result is a u24 (boolean)
                         Ok(TypeInfo::U24)
-                    },
+                    }
                     BinaryOperator::BitAnd | BinaryOperator::BitOr | BinaryOperator::BitXor => {
                         // Bitwise operations
                         if !self.is_integral(&left_type)? || !self.is_integral(&right_type)? {
@@ -705,10 +815,10 @@ impl TypeChecker {
                                 column: location.column,
                             });
                         }
-                        
+
                         // Result has the same type as the operands
                         Ok(left_type)
-                    },
+                    }
                     BinaryOperator::Pow => {
                         // Exponentiation (only for f24)
                         if left_type != TypeInfo::F24 || right_type != TypeInfo::F24 {
@@ -720,9 +830,9 @@ impl TypeChecker {
                                 column: location.column,
                             });
                         }
-                        
+
                         Ok(TypeInfo::F24)
-                    },
+                    }
                     BinaryOperator::BitShiftLeft | BinaryOperator::BitShiftRight => {
                         // Shift operations (only for integral types)
                         if !self.is_integral(&left_type)? || !self.is_integral(&right_type)? {
@@ -734,28 +844,36 @@ impl TypeChecker {
                                 column: location.column,
                             });
                         }
-                        
+
                         // Result has the same type as the left operand
                         Ok(left_type)
-                    },
+                    }
                 }
-            },
+            }
             // Add type checking for other expression types
             // For brevity, we're not implementing all expression types here
-            _ => Err(TypeError::Generic(format!("Type checking not implemented for this expression type yet"))),
+            _ => Err(TypeError::Generic(format!(
+                "Type checking not implemented for this expression type yet"
+            ))),
         }
     }
-    
+
     /// Check if a type is numeric (u24, i24, f24)
     fn is_numeric(&self, type_info: &TypeInfo) -> Result<bool, TypeError> {
-        Ok(matches!(type_info, TypeInfo::U24 | TypeInfo::I24 | TypeInfo::F24 | TypeInfo::Any))
+        Ok(matches!(
+            type_info,
+            TypeInfo::U24 | TypeInfo::I24 | TypeInfo::F24 | TypeInfo::Any
+        ))
     }
-    
+
     /// Check if a type is integral (u24, i24)
     fn is_integral(&self, type_info: &TypeInfo) -> Result<bool, TypeError> {
-        Ok(matches!(type_info, TypeInfo::U24 | TypeInfo::I24 | TypeInfo::Any))
+        Ok(matches!(
+            type_info,
+            TypeInfo::U24 | TypeInfo::I24 | TypeInfo::Any
+        ))
     }
-    
+
     /// Check if one type is compatible with another
     fn is_compatible(&self, expected: &TypeInfo, actual: &TypeInfo) -> Result<bool, TypeError> {
         match (expected, actual) {
@@ -769,36 +887,44 @@ impl TypeChecker {
                 if expected_elements.len() != actual_elements.len() {
                     return Ok(false);
                 }
-                
-                for (expected_element, actual_element) in expected_elements.iter().zip(actual_elements.iter()) {
+
+                for (expected_element, actual_element) in
+                    expected_elements.iter().zip(actual_elements.iter())
+                {
                     if !self.is_compatible(expected_element, actual_element)? {
                         return Ok(false);
                     }
                 }
-                
+
                 Ok(true)
-            },
-            (TypeInfo::Function(expected_param, expected_result), TypeInfo::Function(actual_param, actual_result)) => {
-                Ok(self.is_compatible(expected_param, actual_param)? &&
-                   self.is_compatible(expected_result, actual_result)?)
-            },
-            (TypeInfo::Named(expected_name, expected_params), TypeInfo::Named(actual_name, actual_params)) => {
+            }
+            (
+                TypeInfo::Function(expected_param, expected_result),
+                TypeInfo::Function(actual_param, actual_result),
+            ) => Ok(self.is_compatible(expected_param, actual_param)?
+                && self.is_compatible(expected_result, actual_result)?),
+            (
+                TypeInfo::Named(expected_name, expected_params),
+                TypeInfo::Named(actual_name, actual_params),
+            ) => {
                 if expected_name != actual_name {
                     return Ok(false);
                 }
-                
+
                 if expected_params.len() != actual_params.len() {
                     return Ok(false);
                 }
-                
-                for (expected_param, actual_param) in expected_params.iter().zip(actual_params.iter()) {
+
+                for (expected_param, actual_param) in
+                    expected_params.iter().zip(actual_params.iter())
+                {
                     if !self.is_compatible(expected_param, actual_param)? {
                         return Ok(false);
                     }
                 }
-                
+
                 Ok(true)
-            },
+            }
             _ => Ok(false),
         }
     }

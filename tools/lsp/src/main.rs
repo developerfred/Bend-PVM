@@ -570,6 +570,24 @@ fn find_definition(program: &Program, name: &str) -> Option<AstLocation> {
                     return Some(location.clone());
                 }
             }
+            Definition::TypeAlias {
+                name: def_name,
+                location,
+                ..
+            } => {
+                if def_name == name {
+                    return Some(location.clone());
+                }
+            }
+            Definition::Module {
+                name: def_name,
+                location,
+                ..
+            } => {
+                if def_name == name {
+                    return Some(location.clone());
+                }
+            }
         }
     }
     None
@@ -675,6 +693,54 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
             Some(DocumentSymbol {
                 name: name.clone(),
                 kind: SymbolKind::OBJECT,
+                tags: None,
+                detail: None,
+                range,
+                selection_range: range,
+                children: None,
+                data: None,
+                deprecated: None,
+            })
+        }
+        Definition::TypeAlias { name, location, .. } => {
+            let range = Range {
+                start: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1) as u32,
+                },
+                end: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1 + name.len()) as u32,
+                },
+            };
+
+            Some(DocumentSymbol {
+                name: name.clone(),
+                kind: SymbolKind::TYPE_ALIAS,
+                tags: None,
+                detail: None,
+                range,
+                selection_range: range,
+                children: None,
+                data: None,
+                deprecated: None,
+            })
+        }
+        Definition::Module { name, location, .. } => {
+            let range = Range {
+                start: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1) as u32,
+                },
+                end: Position {
+                    line: (location.line - 1) as u32,
+                    character: (location.column - 1 + name.len()) as u32,
+                },
+            };
+
+            Some(DocumentSymbol {
+                name: name.clone(),
+                kind: SymbolKind::MODULE,
                 tags: None,
                 detail: None,
                 range,
@@ -824,6 +890,7 @@ mod tests {
             SemanticTokensResult::Partial(semantic_tokens) => {
                 assert!(semantic_tokens.data.is_empty());
             }
+            _ => {}
         }
     }
 

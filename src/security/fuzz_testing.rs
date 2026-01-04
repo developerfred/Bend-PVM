@@ -1,14 +1,13 @@
 /// Fuzz Testing module
-/// 
+///
 /// Provides automated security testing through fuzzing techniques to discover
 /// runtime vulnerabilities, edge cases, and unexpected behaviors.
-
 use crate::compiler::parser::ast::*;
 use crate::security::{SecurityError, SecuritySeverity};
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{SystemTime, UNIX_EPOCH};
-use rand::{Rng, SeedableRng};
-use rand::rngs::StdRng;
 
 /// Fuzz test case
 #[derive(Debug, Clone)]
@@ -242,9 +241,7 @@ impl FuzzTester {
         self.property_checks.push(PropertyCheck {
             name: "NoCrash".to_string(),
             description: "Function should not crash on valid inputs".to_string(),
-            property: Box::new(|_inputs, output| {
-                !matches!(output, TestOutput::Error(_))
-            }),
+            property: Box::new(|_inputs, output| !matches!(output, TestOutput::Error(_))),
             enabled: true,
         });
 
@@ -263,10 +260,13 @@ impl FuzzTester {
             name: "BoundsCheck".to_string(),
             description: "Array access should not go out of bounds".to_string(),
             property: Box::new(|_inputs, output| {
-                !matches!(output, TestOutput::Error(TestError { 
-                    error_type: ErrorType::IndexOutOfBounds, 
-                    .. 
-                }))
+                !matches!(
+                    output,
+                    TestOutput::Error(TestError {
+                        error_type: ErrorType::IndexOutOfBounds,
+                        ..
+                    })
+                )
             }),
             enabled: true,
         });
@@ -276,10 +276,13 @@ impl FuzzTester {
             name: "NoOverflow".to_string(),
             description: "Arithmetic operations should not overflow/underflow".to_string(),
             property: Box::new(|_inputs, output| {
-                !matches!(output, TestOutput::Error(TestError { 
-                    error_type: ErrorType::Overflow | ErrorType::Underflow, 
-                    .. 
-                }))
+                !matches!(
+                    output,
+                    TestOutput::Error(TestError {
+                        error_type: ErrorType::Overflow | ErrorType::Underflow,
+                        ..
+                    })
+                )
             }),
             enabled: true,
         });
@@ -289,10 +292,13 @@ impl FuzzTester {
             name: "AccessControl".to_string(),
             description: "Protected functions should enforce access controls".to_string(),
             property: Box::new(|_inputs, output| {
-                !matches!(output, TestOutput::Error(TestError { 
-                    error_type: ErrorType::AccessViolation, 
-                    .. 
-                }))
+                !matches!(
+                    output,
+                    TestOutput::Error(TestError {
+                        error_type: ErrorType::AccessViolation,
+                        ..
+                    })
+                )
             }),
             enabled: true,
         });
@@ -343,7 +349,10 @@ impl FuzzTester {
                 id: format!("{}_empty", func),
                 inputs: Vec::new(),
                 metadata: TestMetadata {
-                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+                    timestamp: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
                     execution_time_ms: 0,
                     gas_used: 0,
                     coverage_percentage: 0.0,
@@ -361,7 +370,10 @@ impl FuzzTester {
                     TestInput::Boolean(true),
                 ],
                 metadata: TestMetadata {
-                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+                    timestamp: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
                     execution_time_ms: 0,
                     gas_used: 0,
                     coverage_percentage: 0.0,
@@ -374,9 +386,12 @@ impl FuzzTester {
     }
 
     /// Generate a test case
-    fn generate_test_case(&mut self, target_functions: &[String]) -> Result<FuzzTestCase, SecurityError> {
+    fn generate_test_case(
+        &mut self,
+        target_functions: &[String],
+    ) -> Result<FuzzTestCase, SecurityError> {
         let start_time = SystemTime::now();
-        
+
         let test_inputs = match self.rng.gen_range(0..4) {
             0 => self.generate_integer_inputs(),
             1 => self.generate_string_inputs(),
@@ -386,7 +401,10 @@ impl FuzzTester {
         };
 
         let metadata = TestMetadata {
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             execution_time_ms: start_time.elapsed().unwrap_or_default().as_millis() as u64,
             gas_used: 0,
             coverage_percentage: 0.0,
@@ -406,27 +424,29 @@ impl FuzzTester {
     /// Generate integer inputs
     fn generate_integer_inputs(&mut self) -> Vec<TestInput> {
         let count = self.rng.gen_range(1..5);
-        (0..count).map(|_| {
-            match self.rng.gen_range(0..4) {
+        (0..count)
+            .map(|_| match self.rng.gen_range(0..4) {
                 0 => TestInput::Integer(self.rng.gen_range(-1000..1000)),
                 1 => TestInput::UnsignedInteger(self.rng.gen_range(0..1000)),
                 2 => TestInput::Integer(self.rng.gen()),
                 3 => TestInput::UnsignedInteger(self.rng.gen()),
                 _ => TestInput::Integer(0),
-            }
-        }).collect()
+            })
+            .collect()
     }
 
     /// Generate string inputs
     fn generate_string_inputs(&mut self) -> Vec<TestInput> {
         let count = self.rng.gen_range(1..3);
-        (0..count).map(|_| {
-            let length = self.rng.gen_range(0..100);
-            let chars: String = (0..length).map(|_| {
-                self.rng.gen_range(b'a'..=b'z') as char
-            }).collect();
-            TestInput::String(chars)
-        }).collect()
+        (0..count)
+            .map(|_| {
+                let length = self.rng.gen_range(0..100);
+                let chars: String = (0..length)
+                    .map(|_| self.rng.gen_range(b'a'..=b'z') as char)
+                    .collect();
+                TestInput::String(chars)
+            })
+            .collect()
     }
 
     /// Generate mixed inputs
@@ -453,8 +473,8 @@ impl FuzzTester {
     /// Generate random inputs
     fn generate_random_inputs(&mut self) -> Vec<TestInput> {
         let count = self.rng.gen_range(1..10);
-        (0..count).map(|_| {
-            match self.rng.gen_range(0..6) {
+        (0..count)
+            .map(|_| match self.rng.gen_range(0..6) {
                 0 => TestInput::Integer(self.rng.gen_range(-100..100)),
                 1 => TestInput::String(self.rng.gen::<char>().to_string()),
                 2 => TestInput::Boolean(self.rng.gen()),
@@ -465,20 +485,25 @@ impl FuzzTester {
                 ]),
                 5 => TestInput::Address((0..20).map(|_| self.rng.gen()).collect()),
                 _ => TestInput::Integer(0),
-            }
-        }).collect()
+            })
+            .collect()
     }
 
     /// Execute a test case (simplified)
-    fn execute_test_case(&mut self, _test_case: &FuzzTestCase, _program: &Program) -> Result<TestOutput, TestError> {
+    fn execute_test_case(
+        &mut self,
+        _test_case: &FuzzTestCase,
+        _program: &Program,
+    ) -> Result<TestOutput, TestError> {
         // Simplified execution - in a real implementation, this would:
         // 1. Parse the function call
         // 2. Execute in a sandboxed environment
         // 3. Monitor for errors, gas usage, timeouts
         // 4. Return the result or error
-        
+
         // Simulate some execution with potential errors
-        if self.rng.gen::<f64>() < 0.05 { // 5% error rate
+        if self.rng.gen::<f64>() < 0.05 {
+            // 5% error rate
             let error_type = match self.rng.gen_range(0..8) {
                 0 => ErrorType::RuntimeError,
                 1 => ErrorType::GasExceeded,
@@ -490,9 +515,11 @@ impl FuzzTester {
                 _ => ErrorType::RuntimeError,
             };
 
+            let error_message = format!("Simulated error: {:?}", error_type);
+
             Err(TestError {
                 error_type,
-                message: format!("Simulated error: {:?}", error_type),
+                message: error_message,
                 location: None,
             })
         } else {
@@ -510,22 +537,28 @@ impl FuzzTester {
     }
 
     /// Check properties for a test case
-    fn check_properties(&self, _inputs: &[TestInput], output: &TestOutput) -> Result<(), SecurityError> {
+    fn check_properties(
+        &self,
+        _inputs: &[TestInput],
+        output: &TestOutput,
+    ) -> Result<(), SecurityError> {
         if !self.config.enable_property_checking {
             return Ok(());
         }
 
-        for property in &self.property_checks {
-            if property.enabled {
-                // In a real implementation, this would evaluate the property
-                // For now, we just check if there's no error
-                if let TestOutput::Error(error) = output {
-                    return Err(SecurityError::SecurityViolation(format!(
-                        "Property '{}' violated: {}",
-                        property.name,
-                        error.message
-                    )));
-                }
+        // Collect enabled properties to avoid borrow conflicts
+        let enabled_properties: Vec<_> =
+            self.property_checks.iter().filter(|p| p.enabled).collect();
+
+        for property in enabled_properties {
+            // In a real implementation, this would evaluate the property
+            // For now, we just check if there's no error
+            if let TestOutput::Error(error) = output {
+                return Err(SecurityError::SecurityViolation(format!(
+                    "Property '{}' violated: {}",
+                    property.name,
+                    error.message.clone()
+                )));
             }
         }
 
@@ -533,7 +566,11 @@ impl FuzzTester {
     }
 
     /// Check if a test case is interesting
-    fn is_interesting(&self, _test_case: &FuzzTestCase, _output: &Result<TestOutput, TestError>) -> bool {
+    fn is_interesting(
+        &self,
+        _test_case: &FuzzTestCase,
+        _output: &Result<TestOutput, TestError>,
+    ) -> bool {
         // Simplified interestingness check
         // In a real implementation, this would check for:
         // - New code coverage
@@ -545,11 +582,33 @@ impl FuzzTester {
 
     /// Mutate the corpus
     fn mutate_corpus(&mut self) {
-        if let Some(test_case) = self.corpus.get_mut(self.rng.gen_range(0..self.corpus.len())) {
+        // Store values to avoid borrow conflicts
+        let corpus_len = self.corpus.len();
+        if corpus_len == 0 {
+            return;
+        }
+
+        let random_index = self.rng.gen_range(0..corpus_len);
+        let mutation_rate = self.rng.gen::<f64>();
+
+        // Mutate directly without calling mutate_input to avoid borrow conflicts
+        if let Some(test_case) = self.corpus.get_mut(random_index) {
             // Apply random mutations to inputs
             for input in &mut test_case.inputs {
-                if self.rng.gen::<f64>() < 0.1 { // 10% mutation rate per input
-                    self.mutate_input(input);
+                if mutation_rate < 0.1 {
+                    // 10% mutation rate per input - simple mutation
+                    match input {
+                        TestInput::Integer(val) => {
+                            *val = self.rng.gen_range(*val - 10..*val + 10);
+                        }
+                        TestInput::String(s) => {
+                            if !s.is_empty() {
+                                let idx = self.rng.gen_range(0..s.len());
+                                s.remove(idx);
+                            }
+                        }
+                        _ => {}
+                    }
                 }
             }
         }
@@ -572,9 +631,9 @@ impl FuzzTester {
                 } else if s.len() < 100 && self.rng.gen::<f64>() < 0.3 {
                     s.push(self.rng.gen::<char>());
                 } else {
-                    *s = (0..self.rng.gen_range(1..20)).map(|_| {
-                        self.rng.gen_range(b'a'..=b'z') as char
-                    }).collect();
+                    *s = (0..self.rng.gen_range(1..20))
+                        .map(|_| self.rng.gen_range(b'a'..=b'z') as char)
+                        .collect();
                 }
             }
             TestInput::Boolean(val) => {
@@ -599,7 +658,11 @@ impl FuzzTester {
     }
 
     /// Update coverage information
-    fn update_coverage(&mut self, _test_case: &FuzzTestCase, _result: &Result<TestOutput, TestError>) {
+    fn update_coverage(
+        &mut self,
+        _test_case: &FuzzTestCase,
+        _result: &Result<TestOutput, TestError>,
+    ) {
         // Simplified coverage tracking
         // In a real implementation, this would track:
         // - Lines of code executed
@@ -624,12 +687,13 @@ impl FuzzTester {
 
     /// Check if error is a security vulnerability
     fn is_security_vulnerability(&self, error: &TestError) -> bool {
-        matches!(error.error_type,
-            ErrorType::AccessViolation |
-            ErrorType::RuntimeError |
-            ErrorType::Overflow |
-            ErrorType::Underflow |
-            ErrorType::NullPointer
+        matches!(
+            error.error_type,
+            ErrorType::AccessViolation
+                | ErrorType::RuntimeError
+                | ErrorType::Overflow
+                | ErrorType::Underflow
+                | ErrorType::NullPointer
         )
     }
 
@@ -652,7 +716,9 @@ impl FuzzTester {
         match error.error_type {
             ErrorType::AccessViolation => "Critical: Unauthorized access possible".to_string(),
             ErrorType::RuntimeError => "High: Application stability compromised".to_string(),
-            ErrorType::Overflow | ErrorType::Underflow => "High: Integer arithmetic vulnerability".to_string(),
+            ErrorType::Overflow | ErrorType::Underflow => {
+                "High: Integer arithmetic vulnerability".to_string()
+            }
             ErrorType::NullPointer => "High: Memory safety issue".to_string(),
             ErrorType::GasExceeded => "Medium: Potential DoS vector".to_string(),
             _ => format!("Potential issue: {:?}", error.error_type),
@@ -666,17 +732,31 @@ impl FuzzTester {
             success_rate: if !self.execution_history.is_empty() {
                 let total: u32 = self.execution_history.iter().map(|r| r.total_tests).sum();
                 let successful: u32 = self.execution_history.iter().map(|r| r.passed_tests).sum();
-                if total > 0 { (successful as f64 / total as f64) * 100.0 } else { 0.0 }
-            } else { 0.0 },
+                if total > 0 {
+                    (successful as f64 / total as f64) * 100.0
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            },
             corpus_size: self.corpus.len(),
             coverage_points: self.coverage_map.len(),
-            unique_errors: self.execution_history.iter()
+            unique_errors: self
+                .execution_history
+                .iter()
                 .flat_map(|r| r.error_counts.keys())
                 .collect::<HashSet<_>>()
                 .len(),
             avg_execution_time: if !self.execution_history.is_empty() {
-                self.execution_history.iter().map(|r| r.execution_time_ms as f64).sum::<f64>() / self.execution_history.len() as f64
-            } else { 0.0 },
+                self.execution_history
+                    .iter()
+                    .map(|r| r.execution_time_ms as f64)
+                    .sum::<f64>()
+                    / self.execution_history.len() as f64
+            } else {
+                0.0
+            },
         }
     }
 
@@ -685,7 +765,7 @@ impl FuzzTester {
         self.corpus.clear();
         self.coverage_map.clear();
         self.execution_history.clear();
-        
+
         let seed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()

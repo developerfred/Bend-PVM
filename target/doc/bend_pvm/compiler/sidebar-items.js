@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["analyzer","codegen","lexer","module","optimizer","parser","polkavm"]};
