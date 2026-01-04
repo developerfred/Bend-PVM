@@ -77,7 +77,7 @@ impl Formatter {
     }
 
     /// Format Bend-PVM source code
-    pub fn format_source(&mut self, source: &str) -> Result<String, String> {
+    pub fn format_source(&self, source: &str) -> Result<String, String> {
         let mut result = String::new();
         let lines = source.lines().collect::<Vec<_>>();
 
