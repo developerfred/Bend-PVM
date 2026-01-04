@@ -1,0 +1,120 @@
+{
+  "name": "bend-pvm",
+  "displayName": "Bend-PVM",
+  "description": "Language support for Bend-PVM smart contract language",
+  "version": "1.0.0",
+  "publisher": "bend-pvm",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Snippets"
+  ],
+  "keywords": [
+    "bend",
+    "pvm",
+    "smart-contracts",
+    "polkadot",
+    "crypto"
+  ],
+  "activationEvents": [
+    "onLanguage:bend",
+    "onCommand:bend-pvm.activate"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "bend",
+        "aliases": [
+          "Bend",
+          "bend"
+        ],
+        "extensions": [
+          ".bend"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bend",
+        "scopeName": "source.bend",
+        "path": "./syntaxes/bend.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Bend-PVM",
+      "properties": {
+        "bend-pvm.server.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Bend-PVM LSP server executable"
+        },
+        "bend-pvm.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        },
+        "bend-pvm.autoUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically check for updates to the Bend-PVM language server"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "bend-pvm.activate",
+        "title": "Activate Bend-PVM Language Server",
+        "category": "Bend-PVM"
+      },
+      {
+        "command": "bend-pvm.restart",
+        "title": "Restart Bend-PVM Language Server",
+        "category": "Bend-PVM"
+      },
+      {
+        "command": "bend-pvm.showOutput",
+        "title": "Show Bend-PVM Output",
+        "category": "Bend-PVM"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "bend-pvm.activate",
+          "when": "false"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.59.1",
+    "@typescript-eslint/parser": "^5.59.1",
+    "eslint": "^8.39.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  }
+}
