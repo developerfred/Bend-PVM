@@ -3,11 +3,10 @@ use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
 
 use bend_pvm::{compile, CompilerOptions};
-use bend_pvm::formatter::Formatter;
 
 #[derive(Parser, Debug)]
 #[command(name = "bend-pvm")]
-#[command(author = "Codingsh <codingsh@pm.me>")]
+#[command(author = "Your Name <your.email@example.com>")]
 #[command(version = bend_pvm::version())]
 #[command(about = "Bend Programming Language with PolkaVM Integration", long_about = None)]
 struct Cli {
@@ -110,12 +109,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             // Handle auto flag behavior
             let optimize = if cli.auto {
+                // In auto mode, always optimize unless explicitly disabled
                 !no_optimize
             } else {
                 !no_optimize
             };
 
             let type_check = if cli.auto {
+                // In auto mode, always type check unless explicitly disabled
                 !no_type_check
             } else {
                 !no_type_check
@@ -123,12 +124,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Determine output path if not specified
             let output = output.or_else(|| {
-                file.file_stem()
-                    .map(|stem| {
-                        let mut output = PathBuf::from(stem);
-                        output.set_extension("bin");
-                        output
-                    })
+                file.file_stem().map(|stem| {
+                    let mut output = PathBuf::from(stem);
+                    output.set_extension("bin");
+                    output
+                })
             });
 
             // Set compiler options
@@ -146,15 +146,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 security_level: 2,
             };
 
-            // Compile file
+            // Compile the file
             compile(&file, options)?;
 
             println!("Compilation successful.");
-        },
+        }
 
-        Commands::Check { file, no_type_check } => {
+        Commands::Check {
+            file,
+            no_type_check,
+        } => {
             // Handle auto flag behavior
             let type_check = if cli.auto {
+                // In auto mode, always type check unless explicitly disabled
                 !no_type_check
             } else {
                 !no_type_check
@@ -175,30 +179,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 security_level: 2,
             };
 
-            // Check file
+            // Check the file
             compile(&file, options)?;
 
             println!("No errors found.");
-        },
+        }
 
-        Commands::Format { file, output, check } => {
-            let formatter = Formatter::new();
+        Commands::Format {
+            file,
+            output,
+            check,
+        } => {
+            use bend_pvm::formatter::Formatter;
 
             if check {
                 // Check if file is formatted
+                let formatter = Formatter::new();
                 let source = std::fs::read_to_string(&file)
                     .map_err(|e| format!("Failed to read file: {}", e))?;
 
                 if formatter.is_formatted(&source) {
                     println!("File is already formatted.");
-                    Ok(())
+                    return Ok(());
                 } else {
                     println!("File needs formatting.");
-                    Err("File is not formatted".into())
+                    return Err("File is not formatted".into());
                 }
+            }
+            Err(e) => {
+                eprintln!("Failed to read file: {}", e);
+                return Err(e.into());
+            }
             } else {
                 // Format the file
-                let output_path = output.as_ref().unwrap_or(&file);
+                let formatter = Formatter::new();
+                let output_path = output.as_ref().unwrap_or(file);
 
                 if file == output_path {
                     // Format in-place
@@ -227,7 +242,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("File is already formatted: {}", file.display());
                             // Copy file to output if different
                             if file != output_path {
-                                std::fs::copy(&file, output_path)
+                                std::fs::copy(file, output_path)
                                     .map_err(|e| format!("Failed to copy file: {}", e))?;
                                 println!("Copied: {} -> {}", file.display(), output_path.display());
                             }
@@ -243,7 +258,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-        },
+        }
 
         Commands::Init { name, directory } => {
             // Determine project directory
@@ -257,12 +272,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if cli.auto {
                 // In auto mode, also initialize with default dependencies
-                println!("Auto-initializing project '{}' with default dependencies.", name);
+                println!(
+                    "Auto-initializing project '{}' with default dependencies.",
+                    name
+                );
                 // TODO: Add default dependencies to bend.toml
             }
 
             println!("Project '{}' initialized in {:?}.", name, project_dir);
-        },
+        }
     }
 
     Ok(())
@@ -273,17 +291,25 @@ fn create_project_structure(project_dir: &Path, name: &str) -> std::io::Result<(
     let main_file = project_dir.join("src").join("main.bend");
     std::fs::create_dir_all(main_file.parent().unwrap())?;
 
-    std::fs::write(&main_file, format!(r#"
+    std::fs::write(
+        &main_file,
+        format!(
+            r#"
 #{{{name}}}
 # A smart contract written in Bend-PVM.
 
 def main() -> u24:
     return 42
-"#))?;
+"#
+        ),
+    )?;
 
     // Create project configuration
     let config_file = project_dir.join("bend.toml");
-    std::fs::write(&config_file, format!(r#"
+    std::fs::write(
+        &config_file,
+        format!(
+            r#"
 [package]
 name = "{name}"
 version = "0.1.0"
@@ -291,11 +317,16 @@ authors = ["Your Name <your.email@example.com>"]
 
 [dependencies]
 # Add your dependencies here
-"#))?;
+"#
+        ),
+    )?;
 
     // Create README.md
     let readme_file = project_dir.join("README.md");
-    std::fs::write(&readme_file, format!(r#"
+    std::fs::write(
+        &readme_file,
+        format!(
+            r#"
 # {name}
 
 A smart contract written in Bend-PVM.
@@ -311,11 +342,15 @@ bend-pvm compile src/main.bend
 ```
 bend-pvm check src/main.bend
 ```
-"#))?;
+"#
+        ),
+    )?;
 
     // Create .gitignore
     let gitignore_file = project_dir.join(".gitignore");
-    std::fs::write(&gitignore_file, r#"
+    std::fs::write(
+        &gitignore_file,
+        r#"
 # Build artifacts
 *.bin
 *.s
@@ -331,7 +366,8 @@ bend-pvm check src/main.bend
 # OS files
 .DS_Store
 Thumbs.db
-"#))?;
+"#,
+    )?;
 
     Ok(())
 }
