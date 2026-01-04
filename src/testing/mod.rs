@@ -9,10 +9,11 @@ pub mod runner;
 
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use thiserror::Error;
 
-use crate::runtime::env::{Environment, ExecutionContext, ExecutionResult};
+use crate::runtime::env::ExecutionContext;
 use crate::runtime::metering::MeteringContext;
-use crate::runtime::storage::StorageManager;
+use crate::runtime::storage::{StorageManager, StorageLimits};
 
 /// Test case definition
 #[derive(Debug, Clone)]
@@ -109,6 +110,10 @@ pub enum TestError {
     /// Execution error
     #[error("Execution error: {0}")]
     Execution(String),
+
+    /// Runtime error
+    #[error("Runtime error: {0}")]
+    Runtime(String),
 
     /// Assertion failed
     #[error("Assertion failed: {0}")]
@@ -221,7 +226,7 @@ impl TestSuite {
     }
 
     /// Run a single test
-    fn run_test(&self, test: &TestCase) -> TestResult {
+    fn run_test(&self, _test: &TestCase) -> TestResult {
         // In a real implementation, this would run the test
         // For now, we just return a passed result
         TestResult::Passed {

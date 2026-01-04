@@ -1,7 +1,8 @@
 use std::fmt;
+use std::hash::Hash;
 
 /// Represents a token in the Bend-PVM language
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Token {
     // Keywords
     Def,
@@ -26,6 +27,11 @@ pub enum Token {
     Import,
     From,
     As,
+    Fn, // Alias for Def (compatibility)
+    Contract,
+    Interface,
+    Library,
+    Underscore, // For pattern matching
 
     // Symbols
     LParen,
@@ -43,6 +49,11 @@ pub enum Token {
     Equal,
     Tilde,
     BackTick,
+    Assign,     // Alias for Equal (compatibility)
+    LeftParen,  // Alias for LParen
+    RightParen, // Alias for RParen
+    LeftBrace,  // Alias for LBrace
+    RightBrace, // Alias for RBrace
 
     // Operators
     Plus,
@@ -67,12 +78,26 @@ pub enum Token {
     CaretEqual,
     AmpersandEqual,
     PipeEqual,
+    Less,    // Alias for LessThan (for generics)
+    Greater, // Alias for GreaterThan (for generics)
+
+    // Type annotations
+    Uint,   // For type annotations
+    Int,    // For type annotations
+    Float,  // For type annotations
+    String, // For type annotations
+    Char,   // For type annotations
+    Symbol, // For type annotations
+    Any,    // For type annotations
+    U24,    // Alias for UintLiteral
+    I24,    // Alias for IntLiteral
+    F24,    // Alias for FloatLiteral
 
     // Literals
     Identifier(String),
     UintLiteral(u32),  // For u24
     IntLiteral(i32),   // For i24
-    FloatLiteral(f32), // For f24
+    FloatLiteral(u32), // For f24 (stored as bits to enable Eq/Hash)
     StringLiteral(String),
     CharLiteral(char),
     SymbolLiteral(String),
@@ -107,6 +132,11 @@ impl fmt::Display for Token {
             Token::Import => write!(f, "import"),
             Token::From => write!(f, "from"),
             Token::As => write!(f, "as"),
+            Token::Fn => write!(f, "fn"),
+            Token::Contract => write!(f, "contract"),
+            Token::Interface => write!(f, "interface"),
+            Token::Library => write!(f, "library"),
+            Token::Underscore => write!(f, "_"),
             Token::LParen => write!(f, "("),
             Token::RParen => write!(f, ")"),
             Token::LBrace => write!(f, "{{"),
@@ -122,6 +152,11 @@ impl fmt::Display for Token {
             Token::Equal => write!(f, "="),
             Token::Tilde => write!(f, "~"),
             Token::BackTick => write!(f, "`"),
+            Token::Assign => write!(f, "="),
+            Token::LeftParen => write!(f, "("),
+            Token::RightParen => write!(f, ")"),
+            Token::LeftBrace => write!(f, "{{"),
+            Token::RightBrace => write!(f, "}}"),
             Token::Plus => write!(f, "+"),
             Token::Minus => write!(f, "-"),
             Token::Star => write!(f, "*"),
@@ -144,10 +179,22 @@ impl fmt::Display for Token {
             Token::CaretEqual => write!(f, "^="),
             Token::AmpersandEqual => write!(f, "&="),
             Token::PipeEqual => write!(f, "|="),
+            Token::Less => write!(f, "<"),
+            Token::Greater => write!(f, ">"),
+            Token::Uint => write!(f, "Uint"),
+            Token::Int => write!(f, "Int"),
+            Token::Float => write!(f, "Float"),
+            Token::String => write!(f, "String"),
+            Token::Char => write!(f, "Char"),
+            Token::Symbol => write!(f, "Symbol"),
+            Token::Any => write!(f, "Any"),
+            Token::U24 => write!(f, "U24"),
+            Token::I24 => write!(f, "I24"),
+            Token::F24 => write!(f, "F24"),
             Token::Identifier(s) => write!(f, "{}", s),
             Token::UintLiteral(n) => write!(f, "{}", n),
             Token::IntLiteral(n) => write!(f, "{}", n),
-            Token::FloatLiteral(n) => write!(f, "{}", n),
+            Token::FloatLiteral(bits) => write!(f, "{}", f32::from_bits(*bits)),
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::CharLiteral(c) => write!(f, "'{}'", c),
             Token::SymbolLiteral(s) => write!(f, "`{}`", s),

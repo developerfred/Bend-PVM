@@ -4,8 +4,7 @@
 
 use super::analyzer::SolidityAnalyzer;
 use super::ast::SoliditySource;
-use super::converter::SolidityToBendConverter;
-use super::{MigrationConfig, MigrationError, SolidityMigrator};
+use super::{MigrationConfig, SolidityMigrator};
 use clap::{Arg, ArgAction, Command};
 use std::path::PathBuf;
 use std::process;
@@ -107,10 +106,10 @@ pub fn run_cli() {
 }
 
 /// Convert command
-fn convert_command(input: &str, output: Option<String>, recursive: bool) {
+fn convert_command(input: &str, output: Option<String>, _recursive: bool) {
     println!("Converting Solidity files from: {}", input);
 
-    let mut migrator = SolidityMigrator::new();
+    let _migrator = SolidityMigrator::new();
     let mut config = MigrationConfig::default();
 
     if let Some(output_dir) = output {
@@ -211,7 +210,7 @@ fn template_command(erc_type: &str, output: Option<String>) {
 
     // Add ERC-1155 template if requested
     if erc_type == "ERC1155" {
-        migrator.erc_templates.insert("ERC1155", r#"
+        migrator.erc_templates.insert("ERC1155".to_string(), r#"
 /// ERC-1155 Multi-Token Implementation for Bend-PVM
 contract ERC1155 is BendContract {
     /// Token URI
@@ -368,7 +367,8 @@ contract ERC1155 is BendContract {
         self.uri
     }
 }
-"#);
+"#
+        .to_string());
     }
 
     match migrator.get_erc_template(erc_type) {

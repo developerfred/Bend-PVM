@@ -206,7 +206,7 @@ pub struct SecurityReport {
 }
 
 /// Initialize security framework in environment
-pub fn init_security(env: &mut Environment, config: SecurityConfig) -> Result<(), MeteringError> {
+pub fn init_security(_env: &mut Environment, _config: SecurityConfig) -> Result<(), MeteringError> {
     // Security framework is integrated into the runtime environment
     // Additional initialization can be added here
     Ok(())

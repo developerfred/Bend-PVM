@@ -43,6 +43,7 @@ impl Default for StorageLimits {
 }
 
 /// Storage manager for contract storage
+#[derive(Clone, Debug)]
 pub struct StorageManager {
     /// Contract storage (key -> value)
     storage: HashMap<Vec<u8>, Vec<u8>>,

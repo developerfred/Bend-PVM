@@ -9,10 +9,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Call depth tracking
 #[derive(Debug, Clone)]
-struct CallStackEntry {
-    function: String,
-    timestamp: u64,
-    caller: Vec<u8>, // Address of the caller
+pub struct CallStackEntry {
+    pub function: String,
+    pub timestamp: u64,
+    pub caller: Vec<u8>, // Address of the caller
 }
 
 /// Reentrancy guard state
@@ -181,10 +181,7 @@ impl ReentrancyGuard {
         max_frequency: u32,
     ) -> Result<(), SecurityError> {
         let key = function.to_string();
-        let address_set = self
-            .visited_addresses
-            .entry(key)
-            .or_insert_with(HashSet::new);
+        let address_set = self.visited_addresses.entry(key).or_default();
 
         if address_set.len() >= max_frequency as usize && !address_set.contains(address) {
             return Err(SecurityError::ReentrancyDetected);

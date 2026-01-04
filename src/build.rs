@@ -212,12 +212,12 @@ impl DependencyGraph {
     fn add_dependency(&mut self, file: &str, dependency: &str) {
         self.dependencies
             .entry(file.to_string())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(dependency.to_string());
 
         self.reverse_deps
             .entry(dependency.to_string())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(file.to_string());
     }
 
@@ -454,7 +454,7 @@ impl BuildSystem {
 
         // Collect results
         let mut results = Vec::new();
-        for (file, result) in rx {
+        for (_file, result) in rx {
             match result {
                 Ok(artifact) => {
                     self.cache.update_artifact(artifact.clone());

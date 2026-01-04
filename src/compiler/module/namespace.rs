@@ -88,7 +88,7 @@ impl Namespace {
         }
 
         // Then, check imports
-        if let Some(import) = self.imports.get(name) {
+        if let Some(_import) = self.imports.get(name) {
             // For imports, we just return None since we need to look up
             // the definition in the source module, which we don't have here
             return None;

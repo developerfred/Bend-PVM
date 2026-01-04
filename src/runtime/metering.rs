@@ -164,6 +164,7 @@ impl Default for StorageDepositCosts {
 }
 
 /// Metering context for tracking resources
+#[derive(Clone, Debug)]
 pub struct MeteringContext {
     /// Gas costs
     pub gas_costs: GasCosts,

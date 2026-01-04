@@ -41,10 +41,10 @@ pub enum GasCost {
 
 /// Gas tracking entry
 #[derive(Debug, Clone)]
-struct GasEntry {
-    function: String,
-    gas_used: u64,
-    timestamp: u64,
+pub struct GasEntry {
+    pub function: String,
+    pub gas_used: u64,
+    pub timestamp: u64,
 }
 
 /// Gas limit configuration

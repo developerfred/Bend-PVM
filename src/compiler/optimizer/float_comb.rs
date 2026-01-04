@@ -514,7 +514,7 @@ impl OptimizationPass for FloatCombPass {
         "Combines floating-point operations for better performance"
     }
 
-    fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
+    fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError> {
         let mut modified = false;
         let mut new_definitions = Vec::new();
 

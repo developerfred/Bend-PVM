@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compiler::codegen::risc_v::{CodegenError, Instruction, Register, RiscVCodegen};
     use crate::compiler::parser::ast::*;
     use crate::compiler::parser::parser::Parser;
 

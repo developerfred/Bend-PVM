@@ -28,7 +28,7 @@ impl crate::compiler::optimizer::passes::OptimizationPass for PrunePass {
         "Removes dead code, unused functions, and unreachable branches"
     }
 
-    fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
+    fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError> {
         // Collect used functions
         self.used_functions.insert("main".to_string());
 
@@ -49,7 +49,7 @@ impl crate::compiler::optimizer::passes::OptimizationPass for PrunePass {
             .collect();
 
         // Check if anything was removed
-        let changed = pruned_definitions.len() != program.definitions.len();
+        let _changed = pruned_definitions.len() != program.definitions.len();
 
         Ok(OptimizationResult::Unchanged(Program {
             imports: program.imports.clone(),

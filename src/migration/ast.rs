@@ -3,7 +3,6 @@
 //! This module provides AST structures for representing Solidity contracts,
 //! enabling parsing and analysis during migration.
 
-use std::collections::HashMap;
 
 /// Represents a Solidity source location
 #[derive(Debug, Clone, PartialEq)]
@@ -205,7 +204,7 @@ pub enum StorageLocation {
 pub enum TypeName {
     Elementary(ElementaryTypeName),
     UserDefined(UserDefinedTypeName),
-    Array(ArrayTypeName),
+    Array(Box<ArrayTypeName>),
     Mapping(MappingTypeName),
     Function(FunctionTypeName),
 }
@@ -226,7 +225,7 @@ pub struct UserDefinedTypeName {
 #[derive(Debug, Clone)]
 pub struct ArrayTypeName {
     pub base_type: Box<TypeName>,
-    pub length: Option<Expression>,
+    pub length: Option<Box<Expression>>,
     pub location: SolLocation,
 }
 
@@ -259,7 +258,7 @@ pub enum Expression {
     IndexAccess(IndexAccess),
     Conditional(Conditional),
     Tuple(TupleExpression),
-    TypeConversion(TypeConversion),
+    TypeConversion(Box<TypeConversion>),
     NewExpression(NewExpression),
     ArrayLiteral(ArrayLiteral),
     StructLiteral(StructLiteral),
@@ -401,7 +400,7 @@ pub struct TupleExpression {
 
 #[derive(Debug, Clone)]
 pub struct TypeConversion {
-    pub type_name: TypeName,
+    pub type_name: Box<TypeName>,
     pub expression: Box<Expression>,
     pub location: SolLocation,
 }

@@ -145,7 +145,7 @@ enum LogosToken {
 }
 
 /// Represents a token with its position in the source code
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TokenWithPosition {
     pub token: Token,
     pub start: usize,
@@ -205,7 +205,7 @@ impl<'a> BendLexer<'a> {
 
     /// Get the next token from the source
     pub fn next_token(&mut self) -> TokenWithPosition {
-        let mut start_pos = self.logos_lexer.span().end;
+        let start_pos = self.logos_lexer.span().end;
 
         let token_result = self.logos_lexer.next();
 
@@ -269,7 +269,7 @@ impl<'a> BendLexer<'a> {
                     }
                     LogosToken::FloatLiteral => {
                         if let Ok(value) = text.parse::<f32>() {
-                            Token::FloatLiteral(value)
+                            Token::FloatLiteral(value.to_bits())
                         } else {
                             Token::Error(format!("Invalid float literal: {}", text))
                         }
@@ -476,10 +476,10 @@ mod tests {
     #[test]
     fn test_float_literals() {
         let test_cases = vec![
-            ("3.14", Token::FloatLiteral(3.14)),
-            ("-2.5", Token::FloatLiteral(-2.5)),
-            ("+0.0", Token::FloatLiteral(0.0)),
-            ("123.456", Token::FloatLiteral(123.456)),
+            ("3.14", Token::FloatLiteral(3.14_f32.to_bits())),
+            ("-2.5", Token::FloatLiteral((-2.5_f32).to_bits())),
+            ("+0.0", Token::FloatLiteral(0.0_f32.to_bits())),
+            ("123.456", Token::FloatLiteral(123.456_f32.to_bits())),
         ];
 
         for (text, expected) in test_cases {
@@ -487,8 +487,10 @@ mod tests {
             let token = lexer.next_token();
             match (&token.token, &expected) {
                 (Token::FloatLiteral(actual), Token::FloatLiteral(expected_val)) => {
+                    let actual_f = f32::from_bits(*actual);
+                    let expected_f = f32::from_bits(*expected_val);
                     assert!(
-                        (actual - expected_val).abs() < 0.001,
+                        (actual_f - expected_f).abs() < 0.001,
                         "Failed for: {}",
                         text
                     );

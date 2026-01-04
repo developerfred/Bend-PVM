@@ -37,7 +37,7 @@ impl crate::compiler::optimizer::passes::OptimizationPass for InlinePass {
         "Inlines small functions to reduce call overhead"
     }
 
-    fn run(&self, program: Program) -> Result<OptimizationResult, OptimizationError> {
+    fn run(&mut self, program: Program) -> Result<OptimizationResult, OptimizationError> {
         // Collect all function definitions
         for def in &program.definitions {
             if let Definition::FunctionDef { name, .. } = def {
@@ -50,10 +50,9 @@ impl crate::compiler::optimizer::passes::OptimizationPass for InlinePass {
             .definitions
             .iter()
             .map(|def| self.inline_definition(def))
-            .cloned()
             .collect();
 
-        let report = format!("Inlined {} function calls", self.inlined_calls);
+        let _report = format!("Inlined {} function calls", self.inlined_calls);
 
         Ok(OptimizationResult::Unchanged(Program {
             imports: program.imports.clone(),
@@ -65,9 +64,9 @@ impl crate::compiler::optimizer::passes::OptimizationPass for InlinePass {
 
 impl InlinePass {
     /// Inline functions within a definition
-    fn inline_definition(&self, def: &Definition) -> &Definition {
+    fn inline_definition(&mut self, def: &Definition) -> Definition {
         // For now, just return the definition as-is
         // Full inlining implementation would require more complex AST transformation
-        def
+        def.clone()
     }
 }

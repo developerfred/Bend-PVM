@@ -46,28 +46,28 @@ impl MockStdlib {
     }
     
     /// Mock keccak256 hash
-    pub fn keccak256(&self, data: &[u8]) -> Vec<u8> {
+    pub fn keccak256(&self, _data: &[u8]) -> Vec<u8> {
         // In a real implementation, this would compute a keccak256 hash
         // For testing, we'll just return a fixed value
         vec![0x12, 0x34, 0x56, 0x78]
     }
     
     /// Mock sha256 hash
-    pub fn sha256(&self, data: &[u8]) -> Vec<u8> {
+    pub fn sha256(&self, _data: &[u8]) -> Vec<u8> {
         // In a real implementation, this would compute a sha256 hash
         // For testing, we'll just return a fixed value
         vec![0x87, 0x65, 0x43, 0x21]
     }
     
     /// Mock ECDSA recovery
-    pub fn ecdsa_recover(&self, hash: &[u8], signature: &[u8]) -> Option<Vec<u8>> {
+    pub fn ecdsa_recover(&self, _hash: &[u8], _signature: &[u8]) -> Option<Vec<u8>> {
         // In a real implementation, this would recover a public key from a signature
         // For testing, we'll just return a fixed value
         Some(vec![0x42, 0x42, 0x42, 0x42])
     }
     
     /// Mock random number generation
-    pub fn random(&self, seed: &[u8]) -> Vec<u8> {
+    pub fn random(&self, _seed: &[u8]) -> Vec<u8> {
         // In a real implementation, this would generate a random number
         // For testing, we'll just return a fixed value
         vec![0x12, 0x34, 0x56, 0x78]

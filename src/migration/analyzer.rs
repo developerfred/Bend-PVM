@@ -4,7 +4,8 @@
 //! during migration, including compatibility checking and issue detection.
 
 use super::ast::*;
-use super::{IssueSeverity, MigrationError, MigrationIssue};
+use super::{IssueSeverity, MigrationIssue};
+use serde::Serialize;
 
 /// Analyzer for Solidity contracts
 pub struct SolidityAnalyzer {
@@ -14,7 +15,7 @@ pub struct SolidityAnalyzer {
     support_matrix: HashMap<String, SupportLevel>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum SupportLevel {
     Supported,
     Partial,
@@ -407,7 +408,7 @@ impl SolidityAnalyzer {
     }
 
     /// Estimate gas savings
-    fn estimate_gas_savings(&self, source: &SolididitySource) -> f64 {
+    fn estimate_gas_savings(&self, source: &SoliditySource) -> f64 {
         // Simple estimation based on complexity
         let total_functions: usize = source.contracts.iter().map(|c| c.functions.len()).sum();
 
@@ -424,7 +425,7 @@ impl SolidityAnalyzer {
 }
 
 /// Analysis result
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct AnalysisResult {
     /// Issues found during analysis
     pub issues: Vec<MigrationIssue>,
