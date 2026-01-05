@@ -1,7 +1,9 @@
 use crate::compiler::module::ModuleError;
 use crate::compiler::parser::ast::*;
 use crate::stdlib::crypto::generate_crypto_ast;
+use crate::stdlib::datetime::generate_datetime_ast;
 use crate::stdlib::math::generate_math_ast;
+use crate::stdlib::network::generate_network_ast;
 use std::collections::HashMap;
 
 /// Standard library core module
@@ -17,6 +19,12 @@ pub struct StdlibModule {
 
     /// Module definitions
     pub definitions: Vec<Definition>,
+}
+
+impl Default for StdlibCore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl StdlibCore {
@@ -39,6 +47,14 @@ impl StdlibCore {
         core.register_module(StdlibModule {
             name: "Crypto".to_string(),
             definitions: generate_crypto_ast(),
+        });
+        core.register_module(StdlibModule {
+            name: "DateTime".to_string(),
+            definitions: generate_datetime_ast(),
+        });
+        core.register_module(StdlibModule {
+            name: "Network".to_string(),
+            definitions: generate_network_ast(),
         });
 
         core

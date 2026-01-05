@@ -6,6 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -375,8 +376,9 @@ impl BuildSystem {
         Ok(files)
     }
 
-    /// Recursively collect .bend files from directory
-    fn collect_from_directory(&self, dir: &Path, files: &mut Vec<String>) -> BendResult<()> {
+    /// Collect all Bend source files from a directory
+    #[allow(clippy::only_used_in_recursion)]
+    fn collect_from_directory(&self, dir: &Path, files: &mut Vec<String>) -> io::Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();

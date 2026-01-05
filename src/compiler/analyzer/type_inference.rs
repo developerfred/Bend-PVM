@@ -1,3 +1,5 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::collections::{BTreeSet, HashMap};
 use thiserror::Error;
 
@@ -53,6 +55,12 @@ pub enum Symbol {
 pub struct TypeEnv {
     pub symbols: HashMap<String, Symbol>,
     pub type_defs: HashMap<String, TypeDefInfo>,
+}
+
+impl Default for TypeEnv {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TypeEnv {

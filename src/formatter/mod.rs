@@ -107,6 +107,7 @@ impl Formatter {
             let closes_block = body.contains('}');
 
             // Adjust indentation based on block structure
+            #[allow(unused_assignments)]
             let mut target_indent = current_indent;
             if opens_block && !closes_block {
                 // Line opens a block, content after { should be indented
@@ -240,7 +241,7 @@ impl Formatter {
 
             if path.is_dir() {
                 formatted_files.extend(self.format_directory(&path)?);
-            } else if path.extension().map_or(false, |ext| ext == "bend") {
+            } else if path.extension().is_some_and(|ext| ext == "bend") {
                 if let FormatResult::Formatted(_) = self.format_file(&path)? {
                     formatted_files.push(path.display().to_string());
                 }

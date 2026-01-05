@@ -65,11 +65,7 @@ impl Disassembler {
         pc: usize,
         context_count: usize,
     ) -> Vec<DisassembledInstruction> {
-        let start = if pc > context_count {
-            pc - context_count
-        } else {
-            0
-        };
+        let start = pc.saturating_sub(context_count);
 
         let end = if pc + context_count < self.instructions.len() {
             pc + context_count + 1
@@ -119,7 +115,8 @@ pub struct DisassembledInstruction {
 }
 
 impl DisassembledInstruction {
-    /// Get a human-readable representation of the instruction
+    /// Convert to string representation
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         format!("{:08x}: {}", self.address, self.instruction)
     }

@@ -166,6 +166,7 @@ pub struct FuzzTester {
 }
 
 /// Property check definition
+#[allow(clippy::type_complexity)]
 pub struct PropertyCheck {
     pub name: String,
     pub description: String,
@@ -182,6 +183,12 @@ impl Clone for PropertyCheck {
             property: Box::new(|_, _| true),
             enabled: self.enabled,
         }
+    }
+}
+
+impl Default for FuzzTester {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

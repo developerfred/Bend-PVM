@@ -1,10 +1,11 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::collections::HashMap;
 
 use super::ast::*;
-use crate::compiler::lexer::{
-    lexer::{BendLexer, TokenWithPosition},
-    token::Token,
-};
+
+use crate::compiler::lexer::lexer::{BendLexer, TokenWithPosition};
+use crate::compiler::lexer::token::Token;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
@@ -860,6 +861,7 @@ impl<'a> Parser<'a> {
             Token::With => self.parse_with_statement(),
             Token::Use => self.parse_use_statement(),
             Token::Let => self.parse_let_statement(),
+            Token::Try => self.parse_try_catch_statement(),
             Token::Def => {
                 let def = self.parse_function_def()?;
                 let location = def.location().clone();
@@ -1649,6 +1651,62 @@ impl<'a> Parser<'a> {
         ))
     }
 
+    fn parse_try_catch_statement(&mut self) -> Result<Statement, ParseError> {
+        let _start_line = self.current_token.line;
+        let _start_column = self.current_token.column;
+        let start = self.current_token.start;
+
+        // Consume 'try' token
+        self.advance();
+
+        // Parse try block
+        let try_block = self.parse_block()?;
+
+        // Parse catch blocks
+        let mut catch_blocks = Vec::new();
+        while self.check(&Token::Catch) {
+            self.advance();
+
+            // Parse optional error type and variable
+            let error_type = if self.check(&Token::Identifier("".to_string())) {
+                None
+            } else {
+                Some("Error".to_string()) // Default error type
+            };
+            let error_var = None; // For now, no error variable
+
+            // Parse catch block body
+            let catch_body = self.parse_block()?;
+
+            let catch_location = Location {
+                line: self.current_token.line,
+                column: self.current_token.column,
+                start: self.current_token.start,
+                end: self.current_token.end,
+            };
+
+            catch_blocks.push(CatchBlock {
+                error_type,
+                error_var,
+                body: catch_body,
+                location: catch_location,
+            });
+        }
+
+        let end_location = Location {
+            line: self.current_token.line,
+            column: self.current_token.column,
+            start,
+            end: self.current_token.end,
+        };
+
+        Ok(Statement::TryCatch {
+            try_block,
+            catch_blocks,
+            location: end_location,
+        })
+    }
+
     fn parse_use_statement(&mut self) -> Result<Statement, ParseError> {
         Err(ParseError::Generic(
             "Use statements not implemented yet".to_string(),
@@ -1802,4 +1860,10 @@ impl<'a> Parser<'a> {
             }
         }
     }
+}
+
+/// Parse a source string into a program
+pub fn parse_from_source(source: &str) -> Result<Program, ParseError> {
+    let mut parser = Parser::new(source);
+    parser.parse_program()
 }

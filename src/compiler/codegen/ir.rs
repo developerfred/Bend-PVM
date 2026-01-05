@@ -5,6 +5,12 @@ pub struct IRGenerator {
     // TODO: Add IR generation fields
 }
 
+impl Default for IRGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IRGenerator {
     pub fn new() -> Self {
         IRGenerator {}

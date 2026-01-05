@@ -1,3 +1,5 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::collections::HashMap;
 use std::fmt::Display;
 use thiserror::Error;
@@ -217,298 +219,106 @@ impl std::fmt::Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Instruction::Load(rd, rs1, offset) => {
-                write!(
-                    f,
-                    "    lw {}, {}({})",
-                    rd.to_string(),
-                    offset,
-                    rs1.to_string()
-                )
+                write!(f, "    lw {}, {}({})", rd, offset, rs1)
             }
             Instruction::Store(rs2, rs1, offset) => {
-                write!(
-                    f,
-                    "    sw {}, {}({})",
-                    rs2.to_string(),
-                    offset,
-                    rs1.to_string()
-                )
+                write!(f, "    sw {}, {}({})", rs2, offset, rs1)
             }
             Instruction::Add(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    add {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    add {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::AddImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    addi {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    addi {}, {}, {}", rd, rs1, imm)
             }
             Instruction::Sub(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    sub {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    sub {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::Mul(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    mul {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    mul {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::Div(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    div {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    div {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::Rem(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    rem {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    rem {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::And(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    and {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    and {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::Or(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    or {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    or {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::Xor(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    xor {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    xor {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::AndImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    andi {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    andi {}, {}, {}", rd, rs1, imm)
             }
             Instruction::OrImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    ori {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    ori {}, {}, {}", rd, rs1, imm)
             }
             Instruction::XorImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    xori {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    xori {}, {}, {}", rd, rs1, imm)
             }
             Instruction::ShiftLeft(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    sll {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    sll {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::ShiftRight(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    srl {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    srl {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::ShiftRightArith(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    sra {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    sra {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::ShiftLeftImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    slli {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    slli {}, {}, {}", rd, rs1, imm)
             }
             Instruction::ShiftRightImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    srli {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    srli {}, {}, {}", rd, rs1, imm)
             }
             Instruction::ShiftRightArithImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    srai {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    srai {}, {}, {}", rd, rs1, imm)
             }
             Instruction::SetLessThan(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    slt {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    slt {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::SetLessThanU(rd, rs1, rs2) => {
-                write!(
-                    f,
-                    "    sltu {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    rs2.to_string()
-                )
+                write!(f, "    sltu {}, {}, {}", rd, rs1, rs2)
             }
             Instruction::SetLessThanImm(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    slti {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    slti {}, {}, {}", rd, rs1, imm)
             }
             Instruction::SetLessThanImmU(rd, rs1, imm) => {
-                write!(
-                    f,
-                    "    sltiu {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    imm
-                )
+                write!(f, "    sltiu {}, {}, {}", rd, rs1, imm)
             }
             Instruction::BranchEq(rs1, rs2, label) => {
-                write!(
-                    f,
-                    "    beq {}, {}, {}",
-                    rs1.to_string(),
-                    rs2.to_string(),
-                    label
-                )
+                write!(f, "    beq {}, {}, {}", rs1, rs2, label)
             }
             Instruction::BranchNe(rs1, rs2, label) => {
-                write!(
-                    f,
-                    "    bne {}, {}, {}",
-                    rs1.to_string(),
-                    rs2.to_string(),
-                    label
-                )
+                write!(f, "    bne {}, {}, {}", rs1, rs2, label)
             }
             Instruction::BranchLt(rs1, rs2, label) => {
-                write!(
-                    f,
-                    "    blt {}, {}, {}",
-                    rs1.to_string(),
-                    rs2.to_string(),
-                    label
-                )
+                write!(f, "    blt {}, {}, {}", rs1, rs2, label)
             }
             Instruction::BranchLe(rs1, rs2, label) => {
-                write!(
-                    f,
-                    "    ble {}, {}, {}",
-                    rs1.to_string(),
-                    rs2.to_string(),
-                    label
-                )
+                write!(f, "    ble {}, {}, {}", rs1, rs2, label)
             }
             Instruction::BranchGe(rs1, rs2, label) => {
-                write!(
-                    f,
-                    "    bge {}, {}, {}",
-                    rs1.to_string(),
-                    rs2.to_string(),
-                    label
-                )
+                write!(f, "    bge {}, {}, {}", rs1, rs2, label)
             }
             Instruction::BranchLtU(rs1, rs2, label) => {
-                write!(
-                    f,
-                    "    bltu {}, {}, {}",
-                    rs1.to_string(),
-                    rs2.to_string(),
-                    label
-                )
+                write!(f, "    bltu {}, {}, {}", rs1, rs2, label)
             }
             Instruction::BranchGeU(rs1, rs2, label) => {
-                write!(
-                    f,
-                    "    bgeu {}, {}, {}",
-                    rs1.to_string(),
-                    rs2.to_string(),
-                    label
-                )
+                write!(f, "    bgeu {}, {}, {}", rs1, rs2, label)
             }
             Instruction::Jump(label) => {
                 write!(f, "    j {}", label)
             }
             Instruction::JumpAndLink(rd, label) => {
-                write!(f, "    jal {}, {}", rd.to_string(), label)
+                write!(f, "    jal {}, {}", rd, label)
             }
             Instruction::JumpAndLinkReg(rd, rs1, offset) => {
-                write!(
-                    f,
-                    "    jalr {}, {}, {}",
-                    rd.to_string(),
-                    rs1.to_string(),
-                    offset
-                )
+                write!(f, "    jalr {}, {}, {}", rd, rs1, offset)
             }
             Instruction::Ecall => {
                 write!(f, "    ecall")
@@ -517,19 +327,19 @@ impl std::fmt::Display for Instruction {
                 write!(f, "    ebreak")
             }
             Instruction::Li(rd, imm) => {
-                write!(f, "    li {}, {}", rd.to_string(), imm)
+                write!(f, "    li {}, {}", rd, imm)
             }
             Instruction::La(rd, symbol) => {
-                write!(f, "    la {}, {}", rd.to_string(), symbol)
+                write!(f, "    la {}, {}", rd, symbol)
             }
             Instruction::Mv(rd, rs1) => {
-                write!(f, "    mv {}, {}", rd.to_string(), rs1.to_string())
+                write!(f, "    mv {}, {}", rd, rs1)
             }
             Instruction::Not(rd, rs1) => {
-                write!(f, "    not {}, {}", rd.to_string(), rs1.to_string())
+                write!(f, "    not {}, {}", rd, rs1)
             }
             Instruction::Neg(rd, rs1) => {
-                write!(f, "    neg {}, {}", rd.to_string(), rs1.to_string())
+                write!(f, "    neg {}, {}", rd, rs1)
             }
             Instruction::Label(label) => {
                 write!(f, "{}:", label)
@@ -560,6 +370,12 @@ pub struct RiscVCodegen {
 
     /// Current offset for next local variable
     current_local_offset: i32,
+}
+
+impl Default for RiscVCodegen {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RiscVCodegen {
@@ -1050,9 +866,9 @@ impl RiscVCodegen {
                         let arg_registers = Register::arg_registers();
                         for (i, arg) in args.iter().enumerate() {
                             if i >= arg_registers.len() {
-                                return Err(CodegenError::InvalidOperation(format!(
-                                    "Too many arguments in function call"
-                                )));
+                                return Err(CodegenError::InvalidOperation(
+                                    "Too many arguments in function call".to_string(),
+                                ));
                             }
 
                             let arg_reg = self.generate_expr(arg)?;
@@ -1072,9 +888,9 @@ impl RiscVCodegen {
                         Err(CodegenError::UndefinedVariable(name.clone()))
                     }
                 } else {
-                    Err(CodegenError::InvalidOperation(format!(
-                        "Function call with non-variable target"
-                    )))
+                    Err(CodegenError::InvalidOperation(
+                        "Function call with non-variable target".to_string(),
+                    ))
                 }
             }
             // For brevity, not implementing all expression types

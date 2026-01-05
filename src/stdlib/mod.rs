@@ -1,7 +1,9 @@
 pub mod collections;
 pub mod core;
 pub mod crypto;
+pub mod datetime;
 pub mod math;
+pub mod network;
 pub mod string;
 
 use self::collections::{Collections, MapUtils, SetUtils, VecUtils};

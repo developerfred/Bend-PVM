@@ -5,6 +5,12 @@ pub struct MemoryManager {
     // TODO: Add memory management fields
 }
 
+impl Default for MemoryManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryManager {
     pub fn new() -> Self {
         MemoryManager {}

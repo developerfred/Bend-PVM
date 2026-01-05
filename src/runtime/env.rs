@@ -65,6 +65,7 @@ pub struct ExecutionContext {
 
 impl ExecutionContext {
     /// Create a new execution context
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         address: [u8; 32],
         caller: [u8; 32],

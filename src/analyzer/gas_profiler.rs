@@ -3,8 +3,8 @@ use std::fs;
 use std::path::Path;
 use thiserror::Error;
 
-use bend_pvm::compiler::parser::ast::*;
-use bend_pvm::compiler::parser::parser::Parser;
+use crate::compiler::parser::ast::*;
+use crate::compiler::parser::parser::Parser;
 
 /// Error types for gas profiling
 #[derive(Error, Debug)]
@@ -506,7 +506,10 @@ impl GasProfiler {
                         return true;
                     }
 
-                    if else_body.map_or(false, |b| self.contains_call_to(&b, function_name)) {
+                    if else_body
+                        .as_ref()
+                        .map_or(false, |b| self.contains_call_to(b, function_name))
+                    {
                         return true;
                     }
                 }
@@ -524,6 +527,7 @@ impl GasProfiler {
     }
 
     /// Check if an expression calls a specific function
+    #[allow(clippy::only_used_in_recursion)]
     fn expr_calls_function(&self, expr: &Expr, function_name: &str) -> bool {
         match expr {
             Expr::FunctionCall { function, args, .. } => {
@@ -622,7 +626,10 @@ impl GasProfiler {
                         return true;
                     }
 
-                    if else_body.map_or(false, |b| self.has_external_calls(&b)) {
+                    if else_body
+                        .as_ref()
+                        .is_some_and(|b| self.has_external_calls(b))
+                    {
                         return true;
                     }
                 }
@@ -640,6 +647,7 @@ impl GasProfiler {
     }
 
     /// Check if an expression has an external call
+    #[allow(clippy::only_used_in_recursion)]
     fn expr_has_external_call(&self, expr: &Expr) -> bool {
         match expr {
             Expr::FunctionCall { function, args, .. } => {
@@ -706,7 +714,7 @@ fn count_lines(block: &Block) -> usize {
             }
             Statement::Bend {
                 body, else_body, ..
-            } => 2 + count_lines(body) + else_body.map_or(0, |b| count_lines(&b)),
+            } => 2 + count_lines(body) + else_body.as_ref().map(count_lines).unwrap_or(0),
             Statement::With { body, .. } => 1 + count_lines(body),
             _ => 1,
         };

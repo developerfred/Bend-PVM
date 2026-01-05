@@ -1,3 +1,5 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::collections::HashMap;
 
 /// Represents a source location for AST nodes
@@ -263,6 +265,11 @@ pub enum Statement {
         expr: Expr,
         location: Location,
     },
+    TryCatch {
+        try_block: Block,
+        catch_blocks: Vec<CatchBlock>,
+        location: Location,
+    },
 }
 
 /// Represents an in-place operation like +=, -=, etc.
@@ -283,6 +290,15 @@ pub enum InPlaceOperator {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SwitchCase {
     pub value: Option<u32>, // None means default case (_)
+    pub body: Block,
+    pub location: Location,
+}
+
+/// Represents a catch block in try-catch
+#[derive(Debug, Clone, PartialEq)]
+pub struct CatchBlock {
+    pub error_type: Option<String>,
+    pub error_var: Option<String>,
     pub body: Block,
     pub location: Location,
 }
@@ -511,6 +527,7 @@ impl LocationProvider for Statement {
             Statement::With { location, .. } => location,
             Statement::LocalDef { location, .. } => location,
             Statement::Expr { location, .. } => location,
+            Statement::TryCatch { location, .. } => location,
         }
     }
 }
@@ -611,6 +628,12 @@ pub enum AstValidationError {
 /// AST validator
 pub struct AstValidator;
 
+impl Default for AstValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AstValidator {
     pub fn new() -> Self {
         AstValidator
@@ -686,12 +709,6 @@ impl AstValidator {
                         });
                     }
                 }
-            }
-        }
-
-        impl Default for AstValidator {
-            fn default() -> Self {
-                Self::new()
             }
         }
     }

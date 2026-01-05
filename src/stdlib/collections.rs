@@ -1,3 +1,6 @@
+#![allow(clippy::ptr_arg)]
+#![allow(clippy::new_ret_no_self)]
+
 /// Collection utilities for Bend-PVM
 pub struct Collections;
 
@@ -91,7 +94,7 @@ impl VecUtils {
 
     /// Map elements
     pub fn map<T, U>(v: &Vec<T>, mapper: impl Fn(&T) -> U) -> Vec<U> {
-        v.iter().map(|x| mapper(x)).collect()
+        v.iter().map(mapper).collect()
     }
 
     /// Reduce elements

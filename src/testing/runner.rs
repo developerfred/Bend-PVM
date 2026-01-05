@@ -20,6 +20,12 @@ pub struct TestRunner {
     timeout: Duration,
 }
 
+impl Default for TestRunner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestRunner {
     /// Create a new test runner
     pub fn new() -> Self {
