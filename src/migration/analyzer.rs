@@ -3,6 +3,8 @@
 //! This module provides analysis capabilities for Solidity contracts
 //! during migration, including compatibility checking and issue detection.
 
+use std::collections::HashMap;
+
 use super::ast::*;
 use super::{IssueSeverity, MigrationIssue};
 use serde::Serialize;
@@ -404,10 +406,8 @@ impl SolidityAnalyzer {
             / (total as f64)
             * 100.0;
 
-            score.clamp(0.0, 100.0)
-        }
+        score.clamp(0.0, 100.0)
     }
-}
 
     /// Estimate gas savings
     fn estimate_gas_savings(&self, source: &SoliditySource) -> f64 {
@@ -442,8 +442,6 @@ impl Default for SolidityAnalyzer {
         Self::new()
     }
 }
-
-use std::collections::HashMap;
 
 #[cfg(test)]
 mod tests {

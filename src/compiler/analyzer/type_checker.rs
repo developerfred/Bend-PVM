@@ -1,10 +1,10 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
-#![allow(clippy::only_used_in_recursion)]
-
-use crate::compiler::analyzer::type_inference::{TypeEnv, TypeInfo};
-use crate::compiler::parser::ast::*
+use crate::compiler::analyzer::type_inference::TypeEnv;
+use crate::compiler::parser::ast::*;
 
 #[derive(Error, Debug, Clone)]
 pub enum TypeError {

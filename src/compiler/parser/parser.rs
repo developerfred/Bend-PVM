@@ -1,7 +1,8 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::collections::HashMap;
 
 use super::ast::*;
-#![allow(clippy::only_used_in_recursion)]
 
 use crate::compiler::lexer::token::Token;
 use crate::compiler::lexer::lexer::{BendLexer, TokenWithPosition};
