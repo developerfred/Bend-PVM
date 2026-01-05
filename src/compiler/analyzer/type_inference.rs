@@ -520,6 +520,7 @@ impl TypeInferrer {
                 LiteralKind::String(_) => Ok(InferType::Named("String".to_string(), vec![])),
                 LiteralKind::Char(_) => Ok(InferType::U24),
                 LiteralKind::Symbol(_) => Ok(InferType::U24),
+                LiteralKind::Bool(_) => Ok(InferType::U24),
             },
             Expr::Tuple { elements, .. } => {
                 let types: Result<Vec<_>, _> =
@@ -667,6 +668,12 @@ impl TypeInferrer {
     }
 }
 
+impl Default for TypeInferrer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn type_check_program(program: &Program) -> Result<InferType, TypeError> {
     let mut inferrer = TypeInferrer::new();
     inferrer.check_program(program)
@@ -685,7 +692,9 @@ mod tests {
             definitions: vec![Definition::FunctionDef {
                 name: "test".to_string(),
                 params: vec![],
-                return_type: Some(Type::U24),
+                return_type: Some(Type::U24 {
+                    location: Location::default(),
+                }),
                 body: Block {
                     statements: vec![Statement::Expr {
                         expr: Expr::Literal {

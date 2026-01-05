@@ -227,9 +227,8 @@ pub fn compute_function_selector(name: &str, _params: &[ParameterMetadata]) -> [
 
     // Simple approach: use first 4 bytes of the function name
     let name_bytes = name.as_bytes();
-    for i in 0..std::cmp::min(4, name_bytes.len()) {
-        selector[i] = name_bytes[i];
-    }
+    selector[..std::cmp::min(4, name_bytes.len())]
+        .copy_from_slice(&name_bytes[..std::cmp::min(4, name_bytes.len())]);
 
     selector
 }

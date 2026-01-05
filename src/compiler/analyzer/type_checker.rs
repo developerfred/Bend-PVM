@@ -283,75 +283,73 @@ impl TypeChecker {
 
         // Second pass: type check function definitions
         for definition in &program.definitions {
-            match definition {
-                Definition::FunctionDef {
-                    name,
-                    params,
-                    return_type,
-                    body,
-                    checked,
-                    ..
-                } => {
-                    // Skip type checking for unchecked functions
-                    if let Some(false) = checked {
-                        continue;
-                    }
-
-                    // Create a new scope for the function
-                    let mut checker = self.new_scope();
-
-                    // Add parameters to the scope
-                    let mut param_types = Vec::new();
-                    for param in params {
-                        let param_type = checker.ast_type_to_type_info(&param.ty)?;
-
-                        checker
-                            .symbols
-                            .insert(param.name.clone(), Symbol::Variable(param_type.clone()));
-                        param_types.push(param_type);
-                    }
-
-                    // Set the current function return type
-                    checker.current_function_return_type = if let Some(ret_type) = return_type {
-                        Some(checker.ast_type_to_type_info(ret_type)?)
-                    } else {
-                        Some(TypeInfo::Any)
-                    };
-
-                    // Type check the function body
-                    let inferred_return_type = checker.check_block(body)?;
-
-                    // Check if the inferred return type matches the annotated return type
-                    if let Some(ret_type) = &checker.current_function_return_type {
-                        if !checker.is_compatible(ret_type, &inferred_return_type)? {
-                            return Err(TypeError::TypeMismatch {
-                                expected: ret_type.to_string(),
-                                found: inferred_return_type.to_string(),
-                                line: body.location.line,
-                                column: body.location.column,
-                            });
-                        }
-                    }
-
-                    // Construct the function type
-                    let function_type = if params.is_empty() {
-                        inferred_return_type.clone()
-                    } else {
-                        let mut fn_type = inferred_return_type.clone();
-
-                        // Build the function type from right to left
-                        for param_type in param_types.into_iter().rev() {
-                            fn_type = TypeInfo::Function(Box::new(param_type), Box::new(fn_type));
-                        }
-
-                        fn_type
-                    };
-
-                    // Add the function to the symbol table
-                    self.symbols
-                        .insert(name.clone(), Symbol::Function(function_type));
+            if let Definition::FunctionDef {
+                name,
+                params,
+                return_type,
+                body,
+                checked,
+                ..
+            } = definition
+            {
+                // Skip type checking for unchecked functions
+                if let Some(false) = checked {
+                    continue;
                 }
-                _ => {}
+
+                // Create a new scope for the function
+                let mut checker = self.new_scope();
+
+                // Add parameters to the scope
+                let mut param_types = Vec::new();
+                for param in params {
+                    let param_type = checker.ast_type_to_type_info(&param.ty)?;
+
+                    checker
+                        .symbols
+                        .insert(param.name.clone(), Symbol::Variable(param_type.clone()));
+                    param_types.push(param_type);
+                }
+
+                // Set the current function return type
+                checker.current_function_return_type = if let Some(ret_type) = return_type {
+                    Some(checker.ast_type_to_type_info(ret_type)?)
+                } else {
+                    Some(TypeInfo::Any)
+                };
+
+                // Type check the function body
+                let inferred_return_type = checker.check_block(body)?;
+
+                // Check if the inferred return type matches the annotated return type
+                if let Some(ret_type) = &checker.current_function_return_type {
+                    if !checker.is_compatible(ret_type, &inferred_return_type)? {
+                        return Err(TypeError::TypeMismatch {
+                            expected: ret_type.to_string(),
+                            found: inferred_return_type.to_string(),
+                            line: body.location.line,
+                            column: body.location.column,
+                        });
+                    }
+                }
+
+                // Construct the function type
+                let function_type = if params.is_empty() {
+                    inferred_return_type.clone()
+                } else {
+                    let mut fn_type = inferred_return_type.clone();
+
+                    // Build the function type from right to left
+                    for param_type in param_types.into_iter().rev() {
+                        fn_type = TypeInfo::Function(Box::new(param_type), Box::new(fn_type));
+                    }
+
+                    fn_type
+                };
+
+                // Add the function to the symbol table
+                self.symbols
+                    .insert(name.clone(), Symbol::Function(function_type));
             }
         }
 
@@ -574,9 +572,9 @@ impl TypeChecker {
             }
             // Add type checking for other statement types
             // For brevity, we're not implementing all statement types here
-            _ => Err(TypeError::Generic(format!(
-                "Type checking not implemented for this statement type yet"
-            ))),
+            _ => Err(TypeError::Generic(
+                "Type checking not implemented for this statement type yet".to_string(),
+            )),
         }
     }
 
@@ -631,9 +629,9 @@ impl TypeChecker {
             }
             // Add type checking for other pattern types
             // For brevity, we're not implementing all pattern types here
-            _ => Err(TypeError::Generic(format!(
-                "Type checking not implemented for this pattern type yet"
-            ))),
+            _ => Err(TypeError::Generic(
+                "Type checking not implemented for this pattern type yet".to_string(),
+            )),
         }
     }
 
@@ -668,6 +666,7 @@ impl TypeChecker {
                 LiteralKind::String(_) => Ok(TypeInfo::Named("String".to_string(), vec![])),
                 LiteralKind::Char(_) => Ok(TypeInfo::U24),
                 LiteralKind::Symbol(_) => Ok(TypeInfo::U24),
+                LiteralKind::Bool(_) => Ok(TypeInfo::U24),
             },
             Expr::Tuple {
                 elements,
@@ -720,7 +719,7 @@ impl TypeChecker {
                         // Check if the argument matches the parameter type
                         if args.len() != 1 {
                             return Err(TypeError::TypeMismatch {
-                                expected: format!("function with 1 argument"),
+                                expected: "function with 1 argument".to_string(),
                                 found: format!("function with {} arguments", args.len()),
                                 line: location.line,
                                 column: location.column,

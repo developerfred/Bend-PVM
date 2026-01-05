@@ -3,9 +3,9 @@
 //! This module provides support for calling external functions from Bend-PVM contracts.
 //! It allows contracts to interface with the host environment and other contracts.
 
+use crate::stdlib::string::StringUtils;
 use std::collections::HashMap;
 use thiserror::Error;
-use crate::stdlib::string::StringUtils;
 
 /// FFI-related errors
 #[derive(Error, Debug)]
@@ -136,6 +136,12 @@ impl FFIRegistry {
     /// List all registered functions
     pub fn list_functions(&self) -> Vec<&FunctionSignature> {
         self.functions.values().collect()
+    }
+}
+
+impl Default for FFIRegistry {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -356,7 +362,11 @@ impl FFIManager {
             "string.contains" => {
                 let s = ABICodec::decode_value(&args[0]);
                 let sub = ABICodec::decode_value(&args[1]);
-                let result = if StringUtils::contains(&s, &sub) { 1u32 } else { 0u32 };
+                let result = if StringUtils::contains(&s, &sub) {
+                    1u32
+                } else {
+                    0u32
+                };
                 Ok(FFICallResult::Success(result.to_be_bytes().to_vec()))
             }
             _ => {
@@ -375,6 +385,12 @@ impl FFIManager {
     /// Get mutable registry reference
     pub fn registry_mut(&mut self) -> &mut FFIRegistry {
         &mut self.registry
+    }
+}
+
+impl Default for FFIManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
