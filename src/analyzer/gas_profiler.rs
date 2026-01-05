@@ -3,8 +3,8 @@ use std::fs;
 use std::collections::HashMap;
 use thiserror::Error;
 
-use bend_pvm::compiler::parser::ast::*;
-use bend_pvm::compiler::parser::parser::Parser;
+use crate::compiler::parser::ast::*;
+use crate::compiler::parser::parser::Parser;
 
 /// Error types for gas profiling
 #[derive(Error, Debug)]
@@ -215,11 +215,7 @@ impl GasProfiler {
                 let if_cost = self.get_cost("if_branch");
                 let condition_cost = self.profile_expr(condition, cost_breakdown);
                 let then_cost = self.profile_block(then_branch, cost_breakdown);
-                let else_cost = if let Some(else_branch) = else_branch {
-                    self.profile_block(else_branch, cost_breakdown)
-                } else {
-                    0
-                };
+                let else_cost = self.profile_block(else_branch, cost_breakdown);
                 
                 // Assume average case: half the time we take the then branch, half the time the else branch
                 let avg_branch_cost = (then_cost + else_cost) / 2;
