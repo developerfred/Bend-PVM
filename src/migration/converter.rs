@@ -571,7 +571,8 @@ impl SolidityToBendConverter {
         match type_name {
             TypeName::Elementary(elem) => self
                 .type_mappings
-                .get(&elem.name).cloned()
+                .get(&elem.name)
+                .cloned()
                 .unwrap_or_else(|| elem.name.clone()),
             TypeName::UserDefined(user) => {
                 // Handle type arguments

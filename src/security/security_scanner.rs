@@ -246,8 +246,9 @@ impl SecurityScanner {
         vulnerabilities: &mut Vec<Vulnerability>,
     ) -> Result<(), SecurityError> {
         if let Definition::FunctionDef {
-                name, body, params, ..
-            } = definition {
+            name, body, params, ..
+        } = definition
+        {
             self.scan_function(name, body, params, vulnerabilities)?;
         }
         Ok(())

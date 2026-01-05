@@ -406,20 +406,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             println!("Project '{}' initialized in {:?}.", name, project_dir);
         }
-        
+
         Commands::GasProfile { file, json } => {
-            // For now, we'll implement a simplified version directly
-            // Later we can integrate with the full gas profiler tool
-            
-            if json {
-                println!(r#"{{"error": "Gas profiling not yet implemented"}}"#);
-            } else {
-                println!("Gas profiling not yet implemented for file: {:?}", file);
-                println!("This feature will be available in a future release.");
+            use bend_pvm::analyzer::gas_profiler::GasProfiler;
+
+            match GasProfiler::new().profile_file(&file) {
+                Ok(profile) => {
+                    if json {
+                        println!("JSON output not yet implemented");
+                    }
+                    bend_pvm::analyzer::gas_profiler::print_profile(&profile);
+                }
+                Err(e) => {
+                    eprintln!("Error profiling gas: {}", e);
+                    std::process::exit(1);
+                }
             }
-            
-            // TODO: Implement full gas profiling using the analyzer tool
-            // For now, we're just showing a placeholder message
         }
     }
 

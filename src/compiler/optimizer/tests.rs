@@ -2,9 +2,7 @@ use super::*;
 use crate::compiler::optimizer::eta_reduction::EtaReductionPass;
 use crate::compiler::optimizer::float_comb::FloatCombPass;
 use crate::compiler::optimizer::linearize::LinearizePass;
-use crate::compiler::optimizer::passes::{
-    OptimizationError, OptimizationPass, OptimizationResult,
-};
+use crate::compiler::optimizer::passes::{OptimizationError, OptimizationPass, OptimizationResult};
 use crate::compiler::optimizer::pruner::PrunePass;
 use crate::compiler::parser::ast::*;
 use crate::compiler::parser::parser::ParseError;
@@ -318,10 +316,7 @@ fn test_fold_complex_expression() {
                     let folded = result.unwrap();
 
                     // Should fold both parts
-                    assert!(matches!(
-                        folded,
-                        Expr::Literal { .. }
-                    ));
+                    assert!(matches!(folded, Expr::Literal { .. }));
                 }
             }
         }
@@ -331,13 +326,14 @@ fn test_fold_complex_expression() {
 #[test]
 fn test_preserve_non_foldable() {
     let input = r#"
-        fn main() {
-            let x = 5 + y;  // y is not a constant
+        fn main(y: u32) -> u32 {
+            let x = 5 + y;
+            x
         }
     "#;
 
     let parsed = parse_from_source(input);
-    assert!(parsed.is_ok(), "Parsing should succeed");
+    assert!(parsed.is_ok(), "Parsing should succeed: {:?}", parsed.err());
 
     let program = parsed.unwrap();
     let mut optimized = super::constant_folding::ConstantFolding::new();
@@ -351,12 +347,14 @@ fn test_preserve_non_foldable() {
                     let folded = result.unwrap();
 
                     // Non-foldable expressions should be preserved
-                    assert!(matches!(folded,
-                    Expr::BinaryOp {
-                        left: _,
-                        right: _,
-                        ..
-                    }));
+                    assert!(matches!(
+                        folded,
+                        Expr::BinaryOp {
+                            left: _,
+                            right: _,
+                            ..
+                        }
+                    ));
                 }
             }
         }

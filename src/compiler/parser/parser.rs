@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use super::ast::*;
 
-use crate::compiler::lexer::token::Token;
 use crate::compiler::lexer::lexer::{BendLexer, TokenWithPosition};
+use crate::compiler::lexer::token::Token;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
@@ -1652,8 +1652,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_try_catch_statement(&mut self) -> Result<Statement, ParseError> {
-        let start_line = self.current_token.line;
-        let start_column = self.current_token.column;
+        let _start_line = self.current_token.line;
+        let _start_column = self.current_token.column;
         let start = self.current_token.start;
 
         // Consume 'try' token
@@ -1666,25 +1666,25 @@ impl<'a> Parser<'a> {
         let mut catch_blocks = Vec::new();
         while self.check(&Token::Catch) {
             self.advance();
-            
+
             // Parse optional error type and variable
             let error_type = if self.check(&Token::Identifier("".to_string())) {
                 None
             } else {
-                Some("Error".to_string())  // Default error type
+                Some("Error".to_string()) // Default error type
             };
-            let error_var = None;  // For now, no error variable
+            let error_var = None; // For now, no error variable
 
             // Parse catch block body
             let catch_body = self.parse_block()?;
-            
+
             let catch_location = Location {
                 line: self.current_token.line,
                 column: self.current_token.column,
                 start: self.current_token.start,
                 end: self.current_token.end,
             };
-            
+
             catch_blocks.push(CatchBlock {
                 error_type,
                 error_var,

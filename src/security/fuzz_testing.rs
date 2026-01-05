@@ -166,6 +166,7 @@ pub struct FuzzTester {
 }
 
 /// Property check definition
+#[allow(clippy::type_complexity)]
 pub struct PropertyCheck {
     pub name: String,
     pub description: String,

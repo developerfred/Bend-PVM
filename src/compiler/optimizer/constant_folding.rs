@@ -44,12 +44,29 @@ impl ConstantFolding {
     /// Apply constant folding to an expression
     pub fn fold_expression(&mut self, expr: &Expr) -> Result<Expr, String> {
         match expr {
-            Expr::BinaryOp { left, operator, right, location: _ } => {
-                // Try to evaluate both operands as constants
-                if let Some(result) = self.try_fold_binary_op(left, right, operator.clone()) {
-                    Ok(result.clone())
+            Expr::BinaryOp {
+                left,
+                operator,
+                right,
+                location: _,
+            } => {
+                // First, recursively fold the left and right operands
+                let folded_left = self.fold_expression(left)?;
+                let folded_right = self.fold_expression(right)?;
+
+                // Then try to evaluate the binary operation with the folded operands
+                if let Some(result) =
+                    self.try_fold_binary_op(&folded_left, &folded_right, operator.clone())
+                {
+                    Ok(result)
                 } else {
-                    Ok(expr.clone())
+                    // Return the folded binary operation if we couldn't evaluate it
+                    Ok(Expr::BinaryOp {
+                        left: Box::new(folded_left),
+                        operator: operator.clone(),
+                        right: Box::new(folded_right),
+                        location: expr.location().clone(),
+                    })
                 }
             }
             _ => Ok(expr.clone()),
@@ -89,7 +106,9 @@ impl ConstantFolding {
             }
 
             // Division with constants
-            (Some(l_div), Some(r_div), crate::compiler::parser::ast::BinaryOperator::Div) if r_div != 0 => {
+            (Some(l_div), Some(r_div), crate::compiler::parser::ast::BinaryOperator::Div)
+                if r_div != 0 =>
+            {
                 self.optimized_ops += 1;
                 self.folded_constants += 1;
                 return Some(Expr::Literal {
