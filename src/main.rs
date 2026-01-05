@@ -57,6 +57,17 @@ enum Commands {
         no_abi: bool,
     },
 
+    /// Profile gas usage of a Bend source file
+    GasProfile {
+        /// Bend source file
+        #[arg(required = true)]
+        file: PathBuf,
+
+        /// Output in JSON format
+        #[arg(short, long)]
+        json: bool,
+    },
+
     /// Check a Bend source file for errors
     Check {
         /// Bend source file
@@ -111,6 +122,17 @@ enum Commands {
         /// Project directory (defaults to a new directory with the project name)
         #[arg(short, long)]
         directory: Option<PathBuf>,
+    },
+
+    /// Profile gas usage of a Bend source file
+    GasProfile {
+        /// Bend source file
+        #[arg(required = true)]
+        file: PathBuf,
+
+        /// Output in JSON format
+        #[arg(short, long)]
+        json: bool,
     },
 }
 
