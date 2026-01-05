@@ -15,6 +15,12 @@ pub struct ModuleLoader {
     loaded: HashSet<PathBuf>,
 }
 
+impl Default for ModuleLoader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModuleLoader {
     /// Create a new module loader
     pub fn new() -> Self {

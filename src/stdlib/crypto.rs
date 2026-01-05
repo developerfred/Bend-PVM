@@ -5,6 +5,12 @@ use crate::runtime::metering::MeteringError;
 /// Crypto functions implementation
 pub struct CryptoFunctions;
 
+impl Default for CryptoFunctions {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CryptoFunctions {
     /// Create a new crypto functions instance
     pub fn new() -> Self {

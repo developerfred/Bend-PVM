@@ -185,6 +185,12 @@ impl Clone for PropertyCheck {
     }
 }
 
+impl Default for FuzzTester {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FuzzTester {
     /// Create a new fuzz tester
     pub fn new() -> Self {

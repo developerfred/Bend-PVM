@@ -35,6 +35,12 @@ pub struct DebuggerState {
     pub local_variables: HashMap<String, u32>,
 }
 
+impl Default for DebuggerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DebuggerState {
     /// Create a new debugger state
     pub fn new() -> Self {

@@ -11,6 +11,12 @@ pub struct PrunePass {
     used_functions: HashSet<String>,
 }
 
+impl Default for PrunePass {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PrunePass {
     pub fn new() -> Self {
         PrunePass {

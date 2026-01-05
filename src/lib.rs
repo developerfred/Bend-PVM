@@ -5,11 +5,13 @@ pub mod ffi;
 
 pub mod compiler {
     pub mod lexer {
+        #[allow(clippy::module_inception)]
         pub mod lexer;
         pub mod token;
     }
     pub mod parser {
         pub mod ast;
+        #[allow(clippy::module_inception)]
         pub mod parser;
         #[cfg(test)]
         mod tests;
@@ -19,6 +21,7 @@ pub mod compiler {
         pub mod type_inference;
     }
     pub mod optimizer {
+        pub mod constant_folding;
         pub mod eta_reduction;
         pub mod float_comb;
         pub mod inline;

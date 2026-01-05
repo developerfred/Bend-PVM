@@ -245,13 +245,10 @@ impl SecurityScanner {
         definition: &Definition,
         vulnerabilities: &mut Vec<Vulnerability>,
     ) -> Result<(), SecurityError> {
-        match definition {
-            Definition::FunctionDef {
+        if let Definition::FunctionDef {
                 name, body, params, ..
-            } => {
-                self.scan_function(name, body, params, vulnerabilities)?;
-            }
-            _ => {}
+            } = definition {
+            self.scan_function(name, body, params, vulnerabilities)?;
         }
         Ok(())
     }
@@ -582,7 +579,7 @@ impl SecurityScanner {
         let weighted_score = (scan_result.critical_count * 10)
             + (scan_result.high_count * 5)
             + (scan_result.medium_count * 2)
-            + (scan_result.low_count * 1);
+            + scan_result.low_count;
 
         let max_possible_score = 100.0;
         let score = max_possible_score - (weighted_score as f64 * 2.0);

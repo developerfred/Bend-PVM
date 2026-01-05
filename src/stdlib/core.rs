@@ -19,6 +19,12 @@ pub struct StdlibModule {
     pub definitions: Vec<Definition>,
 }
 
+impl Default for StdlibCore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StdlibCore {
     /// Create a new standard library core
     pub fn new() -> Self {

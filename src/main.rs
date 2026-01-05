@@ -337,7 +337,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         Err(e) => {
                             eprintln!("Failed to format file: {}", e);
-                            return Err(e.into());
+                            return Err(e);
                         }
                     }
                 } else {
@@ -367,7 +367,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         Err(e) => {
                             eprintln!("Failed to format file: {}", e);
-                            return Err(e.into());
+                            return Err(e);
                         }
                     }
                 }

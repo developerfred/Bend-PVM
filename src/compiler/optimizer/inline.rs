@@ -17,6 +17,12 @@ pub struct InlinePass {
     inlined_calls: usize,
 }
 
+impl Default for InlinePass {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InlinePass {
     pub fn new() -> Self {
         InlinePass {

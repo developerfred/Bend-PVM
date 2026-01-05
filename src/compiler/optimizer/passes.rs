@@ -86,6 +86,12 @@ pub enum OptimizationLevel {
     Aggressive,
 }
 
+impl Default for OptimizationManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OptimizationManager {
     /// Creates a new optimization manager with default passes
     pub fn new() -> Self {
