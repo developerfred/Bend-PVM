@@ -367,7 +367,7 @@ impl BuildSystem {
         for source_file in &self.config.source_files {
             if source_file.is_dir() {
                 self.collect_from_directory(source_file, &mut files)?;
-            } else if source_file.extension().map_or(false, |ext| ext == "bend") {
+            } else if source_file.extension().is_some_and(|ext| ext == "bend") {
                 files.push(source_file.to_string_lossy().to_string());
             }
         }
@@ -383,7 +383,7 @@ impl BuildSystem {
 
             if path.is_dir() {
                 self.collect_from_directory(&path, files)?;
-            } else if path.extension().map_or(false, |ext| ext == "bend") {
+            } else if path.extension().is_some_and(|ext| ext == "bend") {
                 files.push(path.to_string_lossy().to_string());
             }
         }
@@ -433,7 +433,7 @@ impl BuildSystem {
 
         // Spawn worker threads
         let mut handles = Vec::new();
-        let files_per_thread = (files.len() + self.config.jobs - 1) / self.config.jobs;
+        let files_per_thread = files.len().div_ceil(self.config.jobs);
 
         for chunk in files.chunks(files_per_thread) {
             let chunk = chunk.to_vec();
@@ -721,8 +721,8 @@ mod tests {
         };
 
         cache.update_artifact(artifact);
-        assert!(cache.needs_rebuild(Path::new("test.bend"), "abcd"));
-        assert!(!cache.needs_rebuild(Path::new("test.bend"), "abcd"));
+        assert!(!cache.needs_rebuild(Path::new("test.bend"), "abcd")); // Cache hit - same hash
+        assert!(cache.needs_rebuild(Path::new("test.bend"), "efgh")); // Cache miss - different hash
 
         // Cleanup
         let _ = fs::remove_file(&cache_path);

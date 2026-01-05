@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 /// Represents a source location for AST nodes
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
@@ -32,7 +32,7 @@ impl Location {
 }
 
 /// Represents a complete Bend-PVM program
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub imports: Vec<Import>,
     pub definitions: Vec<Definition>,
@@ -40,7 +40,7 @@ pub struct Program {
 }
 
 /// Represents an import statement
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Import {
     FromImport {
         path: String,
@@ -54,7 +54,7 @@ pub enum Import {
 }
 
 /// Represents an imported name, optionally aliased
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImportName {
     pub name: String,
     pub alias: Option<String>,
@@ -311,8 +311,18 @@ pub enum Pattern {
         fields: HashMap<String, Pattern>, // For object/type constructors
         location: Location,
     },
+    TupleConstructor {
+        name: String,
+        args: Vec<Pattern>,
+        location: Location,
+    },
     Literal {
         value: Expr, // Only for literals
+        location: Location,
+    },
+    Member {
+        parent: Box<Pattern>,
+        member: String,
         location: Location,
     },
     Wildcard {
@@ -336,6 +346,10 @@ pub enum Expr {
         location: Location,
     },
     List {
+        elements: Vec<Expr>,
+        location: Location,
+    },
+    Array {
         elements: Vec<Expr>,
         location: Location,
     },
@@ -367,6 +381,11 @@ pub enum Expr {
         right: Box<Expr>,
         location: Location,
     },
+    FieldAccess {
+        object: Box<Expr>,
+        field: String,
+        location: Location,
+    },
     Superposition {
         elements: Vec<Expr>,
         location: Location,
@@ -385,6 +404,12 @@ pub enum Expr {
         right: Box<Expr>,
         location: Location,
     },
+    If {
+        condition: Box<Expr>,
+        then_branch: Box<Expr>,
+        else_branch: Box<Expr>,
+        location: Location,
+    },
     Block {
         block: Block,
         location: Location,
@@ -400,6 +425,7 @@ pub enum LiteralKind {
     Uint(u32),  // For u24
     Int(i32),   // For i24
     Float(f32), // For f24
+    Bool(bool),
     String(String),
     Char(char),
     Symbol(String),
@@ -451,15 +477,18 @@ impl LocationProvider for Expr {
             Expr::Literal { location, .. } => location,
             Expr::Tuple { location, .. } => location,
             Expr::List { location, .. } => location,
+            Expr::Array { location, .. } => location,
             Expr::Constructor { location, .. } => location,
             Expr::FunctionCall { location, .. } => location,
             Expr::Lambda { location, .. } => location,
             Expr::UnsccopedLambda { location, .. } => location,
             Expr::BinaryOp { location, .. } => location,
+            Expr::FieldAccess { location, .. } => location,
             Expr::Superposition { location, .. } => location,
             Expr::MapAccess { location, .. } => location,
             Expr::TreeLeaf { location, .. } => location,
             Expr::TreeNode { location, .. } => location,
+            Expr::If { location, .. } => location,
             Expr::Block { location, .. } => location,
             Expr::Eraser { location } => location,
         }
@@ -525,6 +554,12 @@ pub struct BasicAstVisitor;
 impl BasicAstVisitor {
     pub fn new() -> Self {
         BasicAstVisitor
+    }
+}
+
+impl Default for BasicAstVisitor {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -651,6 +686,12 @@ impl AstValidator {
                         });
                     }
                 }
+            }
+        }
+
+        impl Default for AstValidator {
+            fn default() -> Self {
+                Self::new()
             }
         }
     }

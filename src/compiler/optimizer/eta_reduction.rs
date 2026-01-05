@@ -14,7 +14,9 @@ impl EtaReductionPass {
     pub fn new() -> Self {
         EtaReductionPass
     }
+}
 
+impl EtaReductionPass {
     /// Optimize a block using eta reduction
     fn optimize_block(&self, block: &Block) -> (Block, bool) {
         let mut new_statements = Vec::new();
@@ -292,6 +294,12 @@ impl EtaReductionPass {
             // For other expression types, no optimization needed
             _ => (expr.clone(), false),
         }
+    }
+}
+
+impl Default for EtaReductionPass {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

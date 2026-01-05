@@ -32,6 +32,8 @@ pub enum Token {
     Interface,
     Library,
     Underscore, // For pattern matching
+    True,
+    False,
 
     // Symbols
     LParen,
@@ -41,11 +43,13 @@ pub enum Token {
     LBracket,
     RBracket,
     Colon,
+    DoubleColon, // ::
     Semicolon,
     Comma,
     Dot,
     Arrow,
     FatArrow,
+    LeftArrow,
     Equal,
     Tilde,
     BackTick,
@@ -70,6 +74,9 @@ pub enum Token {
     LessEqual,
     EqualEqual,
     NotEqual,
+    BangEqual, // !=
+    AndAnd,    // &&
+    OrOr,      // ||
     PlusEqual,
     MinusEqual,
     StarEqual,
@@ -137,6 +144,8 @@ impl fmt::Display for Token {
             Token::Interface => write!(f, "interface"),
             Token::Library => write!(f, "library"),
             Token::Underscore => write!(f, "_"),
+            Token::True => write!(f, "true"),
+            Token::False => write!(f, "false"),
             Token::LParen => write!(f, "("),
             Token::RParen => write!(f, ")"),
             Token::LBrace => write!(f, "{{"),
@@ -144,11 +153,13 @@ impl fmt::Display for Token {
             Token::LBracket => write!(f, "["),
             Token::RBracket => write!(f, "]"),
             Token::Colon => write!(f, ":"),
+            Token::DoubleColon => write!(f, "::"),
             Token::Semicolon => write!(f, ";"),
             Token::Comma => write!(f, ","),
             Token::Dot => write!(f, "."),
             Token::Arrow => write!(f, "->"),
             Token::FatArrow => write!(f, "=>"),
+            Token::LeftArrow => write!(f, "<-"),
             Token::Equal => write!(f, "="),
             Token::Tilde => write!(f, "~"),
             Token::BackTick => write!(f, "`"),
@@ -171,6 +182,9 @@ impl fmt::Display for Token {
             Token::LessEqual => write!(f, "<="),
             Token::EqualEqual => write!(f, "=="),
             Token::NotEqual => write!(f, "!="),
+            Token::BangEqual => write!(f, "!="),
+            Token::AndAnd => write!(f, "&&"),
+            Token::OrOr => write!(f, "||"),
             Token::PlusEqual => write!(f, "+="),
             Token::MinusEqual => write!(f, "-="),
             Token::StarEqual => write!(f, "*="),

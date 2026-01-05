@@ -505,6 +505,12 @@ impl FloatCombPass {
     }
 }
 
+impl Default for FloatCombPass {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OptimizationPass for FloatCombPass {
     fn name(&self) -> &'static str {
         "float_comb"

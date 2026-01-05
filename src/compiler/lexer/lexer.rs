@@ -49,6 +49,9 @@ enum LogosToken {
     #[token(":")]
     Colon,
 
+    #[token("::")]
+    DoubleColon,
+
     #[token(";")]
     Semicolon,
 
@@ -63,6 +66,9 @@ enum LogosToken {
 
     #[token("=>")]
     FatArrow,
+
+    #[token("<-")]
+    LeftArrow,
 
     #[token("=")]
     Equal,
@@ -171,6 +177,7 @@ impl<'a> BendLexer<'a> {
     /// Create a new lexer for the given source code
     pub fn new(source: &'a str) -> Self {
         let mut keywords = HashMap::new();
+        keywords.insert("fn", Token::Fn);
         keywords.insert("def", Token::Def);
         keywords.insert("type", Token::Type);
         keywords.insert("object", Token::Object);
@@ -193,6 +200,8 @@ impl<'a> BendLexer<'a> {
         keywords.insert("import", Token::Import);
         keywords.insert("from", Token::From);
         keywords.insert("as", Token::As);
+        keywords.insert("true", Token::True);
+        keywords.insert("false", Token::False);
 
         BendLexer {
             logos_lexer: LogosToken::lexer(source),
@@ -255,7 +264,7 @@ impl<'a> BendLexer<'a> {
                     }
                     LogosToken::IntLiteral => {
                         if let Ok(value) = text.parse::<i32>() {
-                            if value > 0x7FFFFF || value < -0x800000 {
+                            if !(-0x800000..=0x7FFFFF).contains(&value) {
                                 Token::Error(format!(
                                     "Signed integer literal exceeds i24 range: {}",
                                     value
@@ -297,11 +306,13 @@ impl<'a> BendLexer<'a> {
                     LogosToken::LBracket => Token::LBracket,
                     LogosToken::RBracket => Token::RBracket,
                     LogosToken::Colon => Token::Colon,
+                    LogosToken::DoubleColon => Token::DoubleColon,
                     LogosToken::Semicolon => Token::Semicolon,
                     LogosToken::Comma => Token::Comma,
                     LogosToken::Dot => Token::Dot,
                     LogosToken::Arrow => Token::Arrow,
                     LogosToken::FatArrow => Token::FatArrow,
+                    LogosToken::LeftArrow => Token::LeftArrow,
                     LogosToken::Equal => Token::Equal,
                     LogosToken::Tilde => Token::Tilde,
                     LogosToken::Plus => Token::Plus,

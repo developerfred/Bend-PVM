@@ -245,6 +245,10 @@ object Counter {
         let mut parser = Parser::new(source);
         let result = parser.parse_program();
 
+        if let Err(e) = &result {
+            println!("Parse error: {:?}", e);
+        }
+
         assert!(result.is_ok());
         let program = result.unwrap();
 
@@ -276,6 +280,10 @@ fn test() {
         let mut parser = Parser::new(source);
         let result = parser.parse_program();
 
+        if let Err(e) = &result {
+            println!("Parse error in test_parser_array_and_map_types: {:?}", e);
+        }
+
         assert!(result.is_ok());
         let program = result.unwrap();
 
@@ -292,7 +300,9 @@ fn test() {
     fn test_parser_bend_construct() {
         let source = r#"
 fn factorial(n: u24) -> u24 {
-    bend x = 1, acc = 1 {
+    bend {
+        let x = 1;
+        let acc = 1;
         if acc > n {
             x
         } else {

@@ -2,7 +2,7 @@
 use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
 
-use bend_pvm::debugger::{DebugInfo, Debugger, DebuggerError};
+use bend_pvm::debugger::{DebugInfo, Debugger};
 use bend_pvm::formatter::Formatter;
 use bend_pvm::{compile, generate_riscv_from_source, CompilerOptions};
 

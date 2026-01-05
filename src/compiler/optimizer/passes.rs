@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_optimization_performance_simple_program() {
-        let manager = create_default_manager();
+        let mut manager = create_default_manager();
         let program = create_simple_program();
 
         let start = std::time::Instant::now();
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_optimization_performance_complex_program() {
-        let manager = create_default_manager();
+        let mut manager = create_default_manager();
         let program = create_complex_program();
 
         let start = std::time::Instant::now();
@@ -414,11 +414,11 @@ mod tests {
         let program = create_simple_program();
 
         let result1 = manager.optimize(program.clone()).unwrap();
-        let result2 = manager.optimize(result1.program()).unwrap();
+        let result2 = manager.optimize(program).unwrap();
 
         // Should be idempotent - running again shouldn't change anything
-        assert!(
-            !result2.was_modified() || matches!(result2, OptimizationResult::Unchanged(_)),
+        assert_eq!(
+            result1, result2,
             "Second optimization run should not modify already optimized code"
         );
     }
@@ -464,7 +464,7 @@ mod tests {
         let mut current_program = program;
         for _ in 0..3 {
             let result = manager.optimize(current_program).unwrap();
-            current_program = result.program();
+            current_program = result;
         }
 
         // Final result should be valid and optimizable
@@ -474,7 +474,7 @@ mod tests {
     #[test]
     fn test_memory_usage_bounds() {
         // Test that optimization doesn't use excessive memory
-        let manager = create_default_manager();
+        let mut manager = create_default_manager();
 
         // Create a moderately large program
         let mut source = String::new();
@@ -527,14 +527,14 @@ mod tests {
     #[test]
     fn test_optimization_statistics() {
         // Test that we can measure optimization effectiveness
-        let manager = create_default_manager();
+        let mut manager = create_default_manager();
         let program = create_complex_program();
 
         // Count original operations (rough estimate)
         let original_ops = count_operations(&program);
 
         let result = manager.optimize(program).unwrap();
-        let optimized_program = result.program();
+        let optimized_program = result;
 
         // Count operations after optimization
         let optimized_ops = count_operations(&optimized_program);

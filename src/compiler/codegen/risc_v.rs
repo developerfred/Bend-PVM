@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 use thiserror::Error;
 
 use crate::compiler::parser::ast::*;
@@ -59,44 +60,47 @@ pub enum Register {
     X31,
 }
 
-impl Register {
-    pub fn to_string(&self) -> String {
-        match self {
-            Register::X0 => "zero".to_string(),
-            Register::X1 => "ra".to_string(),
-            Register::X2 => "sp".to_string(),
-            Register::X3 => "gp".to_string(),
-            Register::X4 => "tp".to_string(),
-            Register::X5 => "t0".to_string(),
-            Register::X6 => "t1".to_string(),
-            Register::X7 => "t2".to_string(),
-            Register::X8 => "s0".to_string(),
-            Register::X9 => "s1".to_string(),
-            Register::X10 => "a0".to_string(),
-            Register::X11 => "a1".to_string(),
-            Register::X12 => "a2".to_string(),
-            Register::X13 => "a3".to_string(),
-            Register::X14 => "a4".to_string(),
-            Register::X15 => "a5".to_string(),
-            Register::X16 => "a6".to_string(),
-            Register::X17 => "a7".to_string(),
-            Register::X18 => "s2".to_string(),
-            Register::X19 => "s3".to_string(),
-            Register::X20 => "s4".to_string(),
-            Register::X21 => "s5".to_string(),
-            Register::X22 => "s6".to_string(),
-            Register::X23 => "s7".to_string(),
-            Register::X24 => "s8".to_string(),
-            Register::X25 => "s9".to_string(),
-            Register::X26 => "s10".to_string(),
-            Register::X27 => "s11".to_string(),
-            Register::X28 => "t3".to_string(),
-            Register::X29 => "t4".to_string(),
-            Register::X30 => "t5".to_string(),
-            Register::X31 => "t6".to_string(),
-        }
+impl Display for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            Register::X0 => "zero",
+            Register::X1 => "ra",
+            Register::X2 => "sp",
+            Register::X3 => "gp",
+            Register::X4 => "tp",
+            Register::X5 => "t0",
+            Register::X6 => "t1",
+            Register::X7 => "t2",
+            Register::X8 => "s0",
+            Register::X9 => "s1",
+            Register::X10 => "a0",
+            Register::X11 => "a1",
+            Register::X12 => "a2",
+            Register::X13 => "a3",
+            Register::X14 => "a4",
+            Register::X15 => "a5",
+            Register::X16 => "a6",
+            Register::X17 => "a7",
+            Register::X18 => "s2",
+            Register::X19 => "s3",
+            Register::X20 => "s4",
+            Register::X21 => "s5",
+            Register::X22 => "s6",
+            Register::X23 => "s7",
+            Register::X24 => "s8",
+            Register::X25 => "s9",
+            Register::X26 => "s10",
+            Register::X27 => "s11",
+            Register::X28 => "t3",
+            Register::X29 => "t4",
+            Register::X30 => "t5",
+            Register::X31 => "t6",
+        };
+        write!(f, "{}", name)
     }
+}
 
+impl Register {
     pub fn arg_registers() -> Vec<Register> {
         vec![
             Register::X10,
@@ -553,6 +557,9 @@ pub struct RiscVCodegen {
 
     /// Labels for function entry points
     function_labels: HashMap<String, String>,
+
+    /// Current offset for next local variable
+    current_local_offset: i32,
 }
 
 impl RiscVCodegen {
@@ -563,6 +570,7 @@ impl RiscVCodegen {
             frame_size: 0,
             next_label_id: 0,
             function_labels: HashMap::new(),
+            current_local_offset: 0,
         }
     }
 
@@ -570,24 +578,19 @@ impl RiscVCodegen {
     pub fn generate(&mut self, program: &Program) -> Result<Vec<Instruction>, CodegenError> {
         // Generate function labels
         for definition in &program.definitions {
-            match definition {
-                Definition::FunctionDef { name, .. } => {
-                    let label = self.generate_function_label(name);
-                    self.function_labels.insert(name.clone(), label);
-                }
-                _ => {}
+            if let Definition::FunctionDef { name, .. } = definition {
+                let label = self.generate_function_label(name);
+                self.function_labels.insert(name.clone(), label);
             }
         }
 
         // Generate code for each function
         for definition in &program.definitions {
-            match definition {
-                Definition::FunctionDef {
-                    name, params, body, ..
-                } => {
-                    self.generate_function(name, params, body)?;
-                }
-                _ => {}
+            if let Definition::FunctionDef {
+                name, params, body, ..
+            } = definition
+            {
+                self.generate_function(name, params, body)?;
             }
         }
 
@@ -610,6 +613,60 @@ impl RiscVCodegen {
         }
     }
 
+    /// Helper to count local variables
+    fn collect_locals(&self, block: &Block) -> usize {
+        let mut count = 0;
+        for stmt in &block.statements {
+            match stmt {
+                Statement::Use { .. } => count += 1,
+                Statement::If {
+                    then_branch,
+                    else_branch,
+                    ..
+                } => {
+                    count += self.collect_locals(then_branch);
+                    count += self.collect_locals(else_branch);
+                }
+                Statement::Match { cases, .. } => {
+                    for case in cases {
+                        count += self.collect_locals(&case.body);
+                    }
+                }
+                Statement::Switch { cases, .. } => {
+                    for case in cases {
+                        count += self.collect_locals(&case.body);
+                    }
+                }
+                Statement::Fold { cases, .. } => {
+                    for case in cases {
+                        count += self.collect_locals(&case.body);
+                    }
+                }
+                Statement::Bend {
+                    body, else_body, ..
+                } => {
+                    count += self.collect_locals(body);
+                    if let Some(else_b) = else_body {
+                        count += self.collect_locals(else_b);
+                    }
+                }
+                Statement::LocalDef { function_def, .. } => {
+                    // If we support local functions, we might need to recurse if they capture?
+                    // For now, ignore.
+                    if let Definition::FunctionDef { .. } = function_def.as_ref() {
+                        // But local functions are separate frames?
+                        // Yes, usually. So don't count their locals here.
+                    }
+                }
+                Statement::With { body, .. } => {
+                    count += self.collect_locals(body);
+                }
+                _ => {}
+            }
+        }
+        count
+    }
+
     /// Generate code for a function
     fn generate_function(
         &mut self,
@@ -619,31 +676,80 @@ impl RiscVCodegen {
     ) -> Result<(), CodegenError> {
         // Reset local variables and frame size
         self.locals.clear();
-        self.frame_size = 0;
+        self.current_local_offset = 0;
+
+        // Calculate frame size
+        // Locals: collect_locals(body) * 4
+        // Params: passed by caller, but we map them to stack offsets if needed?
+        // Wait, current logic maps params to [8, 12, ...].
+        // The implementation assumes params are ALREADY on the stack above the return address.
+        // Or it assumes we need to spill them?
+        // "Allocate space for local variables and function arguments" - the comment said.
+        // But usually arguments are in registers a0-a7.
+        // The previous code seemed to assume we put them on stack?
+        // But it didn't generate store instructions for them!
+        // It just inserted them into self.locals!
+        // This implies the compiler expects params to BE at those offsets.
+        // This is only true if the CALLER put them there.
+        // Or if we spill them in prologue.
+        // Since `generate_function` prologue didn't spill a0-a7,
+        // AND `Expr::Variable` loads from `offset(SP)`,
+        // The only logical conclusion is that the calling convention used by this simple compiler
+        // expects arguments to be passed on the stack.
+
+        // Let's preserve this behavior.
+        // Arguments are at `CallerSP + 0`, `CallerSP + 4`...
+        // `SP = CallerSP - 8` (in original). So `args at SP + 8`.
+
+        let locals_count = self.collect_locals(body);
+        let locals_size = (locals_count * 4) as i32;
+        let total_frame_size = locals_size + 8; // RA + alignment/padding + locals
 
         // Function label
         let function_label = self.function_labels.get(name).unwrap().clone();
         self.instructions.push(Instruction::Label(function_label));
 
-        // Function prologue: save return address and callee-saved registers
+        // Function prologue: save return address
         self.instructions.push(Instruction::Comment(format!(
             "Function prologue for {}",
             name
         )));
-        self.instructions
-            .push(Instruction::AddImm(Register::X2, Register::X2, -8));
-        self.instructions
-            .push(Instruction::Store(Register::X1, Register::X2, 0)); // Save return address
 
-        // Allocate space for local variables and function arguments
-        // (in a real compiler, this would be more sophisticated)
-        let mut offset = 8;
+        // Allocate stack frame
+        self.instructions.push(Instruction::AddImm(
+            Register::X2,
+            Register::X2,
+            -total_frame_size,
+        ));
+
+        // Save RA at `locals_size` (just below caller args)
+        self.instructions
+            .push(Instruction::Store(Register::X1, Register::X2, locals_size));
+
+        // Map params (Caller args start at `total_frame_size + 8` relative to new SP??)
+        // Original: `AddImm -8`. Args at `8`.
+        // `CallerSP = NewSP + 8`.
+        // Args at `CallerSP + 0` = `NewSP + 8`.
+
+        // New: `AddImm -total`.
+        // `CallerSP = NewSP + total`.
+        // Args at `CallerSP + 0` = `NewSP + total`.
+
+        // Actually, if original args were at `0(CallerSP)`, `4(CallerSP)`...
+        // Then yes, offset is `total_frame_size`.
+
+        // But wait, the original code used `offset = 8`.
+        // `frame_size` (which was `offset`) = 8 + params*4.
+
+        // If I change the stack layout, I must ensure `Expr::Variable` uses correct offsets.
+
+        let mut offset = total_frame_size;
         for param in params {
             self.locals.insert(param.name.clone(), offset);
-            offset += 4; // Assuming 4-byte (32-bit) values
+            offset += 4;
         }
 
-        self.frame_size = offset;
+        self.frame_size = total_frame_size; // Maybe unused, but keep it correct
 
         // Generate code for the function body
         self.generate_block(body)?;
@@ -654,9 +760,12 @@ impl RiscVCodegen {
             name
         )));
         self.instructions
-            .push(Instruction::Load(Register::X1, Register::X2, 0)); // Restore return address
-        self.instructions
-            .push(Instruction::AddImm(Register::X2, Register::X2, 8));
+            .push(Instruction::Load(Register::X1, Register::X2, locals_size)); // Restore return address
+        self.instructions.push(Instruction::AddImm(
+            Register::X2,
+            Register::X2,
+            total_frame_size,
+        ));
 
         // Return from function
         self.instructions
@@ -729,10 +838,27 @@ impl RiscVCodegen {
                 // In a real compiler, we would need to merge the results
                 Ok(then_result)
             }
+            Statement::Use { name, value, .. } => {
+                let val_reg = self.generate_expr(value)?;
+
+                // Get pre-assigned offset
+                let offset = self.current_local_offset;
+                self.current_local_offset += 4;
+
+                // Store to stack
+                self.instructions
+                    .push(Instruction::Store(val_reg, Register::X2, offset));
+
+                // Register in locals map
+                self.locals.insert(name.clone(), offset);
+
+                Ok(val_reg)
+            }
+            Statement::Expr { expr, .. } => self.generate_expr(expr),
             // For brevity, not implementing all statement types
-            _ => Err(CodegenError::UnsupportedFeature(format!(
-                "Statement type not yet implemented"
-            ))),
+            _ => Err(CodegenError::UnsupportedFeature(
+                "Statement type not yet implemented".to_string(),
+            )),
         }
     }
 
@@ -774,10 +900,15 @@ impl RiscVCodegen {
                         self.instructions.push(Instruction::Li(reg, *value));
                         Ok(reg)
                     }
+                    LiteralKind::Bool(value) => {
+                        self.instructions
+                            .push(Instruction::Li(reg, if *value { 1 } else { 0 }));
+                        Ok(reg)
+                    }
                     // For brevity, not implementing all literal types
-                    _ => Err(CodegenError::UnsupportedFeature(format!(
-                        "Literal type not yet implemented"
-                    ))),
+                    _ => Err(CodegenError::UnsupportedFeature(
+                        "Literal type not yet implemented".to_string(),
+                    )),
                 }
             }
             Expr::BinaryOp {
@@ -905,9 +1036,9 @@ impl RiscVCodegen {
                         Ok(result_reg)
                     }
                     // For brevity, not implementing all operators
-                    _ => Err(CodegenError::UnsupportedFeature(format!(
-                        "Binary operator not yet implemented"
-                    ))),
+                    _ => Err(CodegenError::UnsupportedFeature(
+                        "Binary operator not yet implemented".to_string(),
+                    )),
                 }
             }
             Expr::FunctionCall { function, args, .. } => {
@@ -947,9 +1078,9 @@ impl RiscVCodegen {
                 }
             }
             // For brevity, not implementing all expression types
-            _ => Err(CodegenError::UnsupportedFeature(format!(
-                "Expression type not yet implemented"
-            ))),
+            _ => Err(CodegenError::UnsupportedFeature(
+                "Expression type not yet implemented".to_string(),
+            )),
         }
     }
 
@@ -977,9 +1108,9 @@ impl RiscVCodegen {
                 }
             }
             // For brevity, not implementing all pattern types
-            _ => Err(CodegenError::UnsupportedFeature(format!(
-                "Pattern type not yet implemented"
-            ))),
+            _ => Err(CodegenError::UnsupportedFeature(
+                "Pattern type not yet implemented".to_string(),
+            )),
         }
     }
 }

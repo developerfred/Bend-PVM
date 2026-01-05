@@ -1,14 +1,14 @@
+pub mod collections;
 pub mod core;
 pub mod crypto;
 pub mod math;
-pub mod collections;
 pub mod string;
 
+use self::collections::{Collections, MapUtils, SetUtils, VecUtils};
 use self::core::StdlibCore;
 use self::crypto::CryptoFunctions;
 use self::math::{BigIntMath, BitwiseMath, MathFunctions, Percentage, Random, SafeMath};
-use self::collections::{Collections, VecUtils, MapUtils, SetUtils};
-use self::string::{StringUtils, Format};
+use self::string::{Format, StringUtils};
 
 /// Initialize the standard library
 pub fn init_stdlib() -> StdlibCore {
