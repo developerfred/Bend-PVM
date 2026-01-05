@@ -60,6 +60,9 @@ pub mod security;
 pub mod stdlib;
 pub mod testing;
 
+// Analyzer tools
+pub mod analyzer;
+
 use std::path::PathBuf;
 use thiserror::Error;
 

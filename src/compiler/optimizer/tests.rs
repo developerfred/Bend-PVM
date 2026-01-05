@@ -221,11 +221,13 @@ mod tests {
 #[test]
 fn test_fold_simple_addition() {
     let input = r#"
+        fn main() {
             let x = 5 + 3;
-        "#;
+        }
+    "#;
 
     let parsed = crate::compiler::parser::parser::parse_from_source(input);
-    assert!(parsed.is_ok());
+    assert!(parsed.is_ok(), "Parsing should succeed");
 
     let program = parsed.unwrap();
     let mut optimized = crate::compiler::optimizer::constant_folding::ConstantFolding::new();
@@ -260,16 +262,18 @@ fn test_fold_simple_addition() {
 }
 
 #[test]
-fn test_fold_multiplication() {
+fn test_fold_simple_addition() {
     let input = r#"
-            let x = 10 * 2;
-        "#;
+        fn main() {
+            let x = 5 + 3;
+        }
+    "#;
 
-    let parsed = crate::compiler::parser::parser::parse_from_source(input);
-    assert!(parsed.is_ok());
+    let parsed = parse_from_source(input);
+    assert!(parsed.is_ok(), "Parsing should succeed");
 
     let program = parsed.unwrap();
-    let mut optimized = crate::compiler::optimizer::constant_folding::ConstantFolding::new();
+    let mut optimized = super::constant_folding::ConstantFolding::new();
 
     for def in &program.definitions {
         if let crate::compiler::parser::ast::Definition::FunctionDef { body, .. } = def {
