@@ -1,3 +1,5 @@
+#![allow(clippy::ptr_arg)]
+
 use crate::compiler::parser::ast::*;
 use crate::runtime::env::Environment;
 use crate::runtime::metering::MeteringError;
@@ -29,7 +31,7 @@ impl Default for MathConstants {
         MathConstants {
             pi: consts::PI,
             e: consts::E,
-            phi: 1.618033988749895,
+            phi: 1.618_034,
             sqrt2: consts::SQRT_2,
             ln2: consts::LN_2,
             ln10: consts::LN_10,
@@ -41,6 +43,12 @@ impl Default for MathConstants {
 pub struct MathFunctions {
     /// Constants
     pub constants: MathConstants,
+}
+
+impl Default for MathFunctions {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MathFunctions {
@@ -283,7 +291,7 @@ impl BigIntMath {
     /// Create big int from i128
     pub fn from_i128(value: i128) -> Vec<u8> {
         let unsigned = if value < 0 {
-            ((value as i128) * -1) as u128
+            -value as u128
         } else {
             value as u128
         };

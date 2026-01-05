@@ -76,7 +76,7 @@ impl DebugInspector {
         };
 
         // Get the function's local variables
-        for (name, _location) in &self.debug_info.locals {
+        for name in self.debug_info.locals.keys() {
             // In a real implementation, we would look up the variable's value
             // based on its location (stack or register)
             // For now, just use the values from the state

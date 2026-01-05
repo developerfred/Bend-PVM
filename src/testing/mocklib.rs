@@ -9,6 +9,12 @@ pub struct MockStdlib {
     pub storage_responses: HashMap<Vec<u8>, Vec<u8>>,
 }
 
+impl Default for MockStdlib {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockStdlib {
     /// Create a new mock standard library
     pub fn new() -> Self {

@@ -17,6 +17,12 @@ pub struct NameResolver {
     name_mapping: HashMap<String, String>,
 }
 
+impl Default for NameResolver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NameResolver {
     /// Create a new name resolver
     pub fn new() -> Self {
@@ -241,7 +247,7 @@ impl NameResolver {
                 }
 
                 // Resolve named arguments
-                for (_, arg) in named_args {
+                for arg in named_args.values_mut() {
                     self.resolve_expr(arg)?;
                 }
             }
@@ -306,7 +312,7 @@ impl NameResolver {
             }
             Pattern::Constructor { fields, .. } => {
                 // Resolve names in constructor fields
-                for (_, field) in fields {
+                for field in fields.values_mut() {
                     self.resolve_pattern(field)?;
                 }
             }

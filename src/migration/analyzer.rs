@@ -3,6 +3,8 @@
 //! This module provides analysis capabilities for Solidity contracts
 //! during migration, including compatibility checking and issue detection.
 
+use std::collections::HashMap;
+
 use super::ast::*;
 use super::{IssueSeverity, MigrationIssue};
 use serde::Serialize;
@@ -306,11 +308,11 @@ impl SolidityAnalyzer {
             }
             Statement::If(if_stmt) => {
                 self.expression_is_external_call(&if_stmt.condition)
-                    || self.statement_has_external_call(&*if_stmt.true_body)
+                    || self.statement_has_external_call(&if_stmt.true_body)
                     || if_stmt
                         .false_body
                         .as_ref()
-                        .map(|s| self.statement_has_external_call(&**s))
+                        .map(|s| self.statement_has_external_call(s))
                         .unwrap_or(false)
             }
             Statement::For(for_stmt) => {
@@ -324,11 +326,11 @@ impl SolidityAnalyzer {
                         .as_ref()
                         .map(|c| self.expression_is_external_call(c))
                         .unwrap_or(false)
-                    || self.statement_has_external_call(&*for_stmt.body)
+                    || self.statement_has_external_call(&for_stmt.body)
             }
             Statement::While(while_stmt) => {
                 self.expression_is_external_call(&while_stmt.condition)
-                    || self.statement_has_external_call(&*while_stmt.body)
+                    || self.statement_has_external_call(&while_stmt.body)
             }
             _ => false,
         }
@@ -404,7 +406,7 @@ impl SolidityAnalyzer {
             / (total as f64)
             * 100.0;
 
-        score.max(0.0).min(100.0)
+        score.clamp(0.0, 100.0)
     }
 
     /// Estimate gas savings
@@ -440,8 +442,6 @@ impl Default for SolidityAnalyzer {
         Self::new()
     }
 }
-
-use std::collections::HashMap;
 
 #[cfg(test)]
 mod tests {

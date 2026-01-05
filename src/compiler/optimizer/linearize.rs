@@ -12,6 +12,12 @@ pub struct LinearizePass {
     counter: u32,
 }
 
+impl Default for LinearizePass {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LinearizePass {
     /// Creates a new linearization pass
     pub fn new() -> Self {

@@ -112,6 +112,17 @@ enum Commands {
         #[arg(short, long)]
         directory: Option<PathBuf>,
     },
+
+    /// Profile gas usage of a Bend source file
+    GasProfile {
+        /// Bend source file
+        #[arg(required = true)]
+        file: PathBuf,
+
+        /// Output in JSON format
+        #[arg(short, long)]
+        json: bool,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -337,7 +348,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         Err(e) => {
                             eprintln!("Failed to format file: {}", e);
-                            return Err(e.into());
+                            return Err(e);
                         }
                     }
                 } else {
@@ -367,7 +378,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         Err(e) => {
                             eprintln!("Failed to format file: {}", e);
-                            return Err(e.into());
+                            return Err(e);
                         }
                     }
                 }
@@ -394,6 +405,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             println!("Project '{}' initialized in {:?}.", name, project_dir);
+        }
+        
+        Commands::GasProfile { file, json } => {
+            // For now, we'll implement a simplified version directly
+            // Later we can integrate with the full gas profiler tool
+            
+            if json {
+                println!(r#"{{"error": "Gas profiling not yet implemented"}}"#);
+            } else {
+                println!("Gas profiling not yet implemented for file: {:?}", file);
+                println!("This feature will be available in a future release.");
+            }
+            
+            // TODO: Implement full gas profiling using the analyzer tool
+            // For now, we're just showing a placeholder message
         }
     }
 

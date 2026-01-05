@@ -121,6 +121,12 @@ pub struct ModuleSystem {
     search_paths: Vec<PathBuf>,
 }
 
+impl Default for ModuleSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModuleSystem {
     /// Create a new module system
     pub fn new() -> Self {
@@ -225,7 +231,7 @@ impl ModuleSystem {
                     for name in names {
                         let import_name = if name.name == "*" {
                             // Import all exports
-                            for (export_name, _symbol) in &imported_module.exports {
+                            for export_name in imported_module.exports.keys() {
                                 let alias = format!("{}/{}", imported_module.name, export_name);
                                 module.namespace.add_import(
                                     export_name.clone(),
@@ -277,7 +283,7 @@ impl ModuleSystem {
                         let imported_module = self.load_module(&module_path)?;
 
                         // Add all exports as imports with qualified names
-                        for (export_name, _symbol) in &imported_module.exports {
+                        for export_name in imported_module.exports.keys() {
                             let alias = format!("{}/{}", imported_module.name, export_name);
                             module.namespace.add_import(
                                 export_name.clone(),

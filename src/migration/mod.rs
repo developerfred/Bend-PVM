@@ -135,6 +135,12 @@ pub struct SolidityMigrator {
     erc_templates: HashMap<String, String>,
 }
 
+impl Default for SolidityMigrator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SolidityMigrator {
     /// Create a new migrator with default configuration
     pub fn new() -> Self {

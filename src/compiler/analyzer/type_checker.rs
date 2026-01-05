@@ -1,6 +1,9 @@
+#![allow(clippy::only_used_in_recursion)]
+
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
+use crate::compiler::analyzer::type_inference::TypeEnv;
 use crate::compiler::parser::ast::*;
 
 #[derive(Error, Debug, Clone)]
@@ -128,6 +131,12 @@ pub struct TypeChecker {
 
     /// Track function return types for checking
     current_function_return_type: Option<TypeInfo>,
+}
+
+impl Default for TypeChecker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TypeChecker {
@@ -857,9 +866,7 @@ impl TypeChecker {
             }
             // Add type checking for other expression types
             // For brevity, we're not implementing all expression types here
-            _ => Err(TypeError::Generic(format!(
-                "Type checking not implemented for this expression type yet"
-            ))),
+            _ => Err(TypeError::Generic("Type checking not implemented for this expression type yet".to_string())),
         }
     }
 

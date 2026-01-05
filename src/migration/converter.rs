@@ -396,12 +396,12 @@ impl SolidityToBendConverter {
                 let condition = self.convert_expression(&if_stmt.condition);
                 self.add_line(&format!("if {} {{", condition));
                 self.indent += 1;
-                self.convert_statement(&*if_stmt.true_body);
+                self.convert_statement(&if_stmt.true_body);
                 if let Some(false_body) = &if_stmt.false_body {
                     self.indent -= 1;
                     self.add_line("} else {");
                     self.indent += 1;
-                    self.convert_statement(&*false_body);
+                    self.convert_statement(false_body);
                 }
                 self.indent -= 1;
                 self.add_line("}");
@@ -426,7 +426,7 @@ impl SolidityToBendConverter {
                 let condition = self.convert_expression(&while_stmt.condition);
                 self.add_line(&format!("while {} {{", condition));
                 self.indent += 1;
-                self.convert_statement(&*while_stmt.body);
+                self.convert_statement(&while_stmt.body);
                 self.indent -= 1;
                 self.add_line("}");
             }
@@ -489,13 +489,13 @@ impl SolidityToBendConverter {
                 }
             }
             Expression::BinaryOperation(binop) => {
-                let left = self.convert_expression(&*binop.left);
-                let right = self.convert_expression(&*binop.right);
+                let left = self.convert_expression(&binop.left);
+                let right = self.convert_expression(&binop.right);
                 let op = self.map_binary_operator(&binop.operator);
                 format!("({} {} {})", left, op, right)
             }
             Expression::UnaryOperation(unop) => {
-                let operand = self.convert_expression(&*unop.operand);
+                let operand = self.convert_expression(&unop.operand);
                 let op = self.map_unary_operator(&unop.operator);
                 if unop.is_prefix {
                     format!("{}{}", op, operand)
@@ -504,7 +504,7 @@ impl SolidityToBendConverter {
                 }
             }
             Expression::FunctionCall(func_call) => {
-                let func_expr = self.convert_expression(&*func_call.expression);
+                let func_expr = self.convert_expression(&func_call.expression);
 
                 // Check if it's a mapped function
                 if let Expression::Identifier(id) = &*func_call.expression {
@@ -526,24 +526,24 @@ impl SolidityToBendConverter {
                 format!("{}({})", func_expr, args.join(", "))
             }
             Expression::MemberAccess(member) => {
-                let base = self.convert_expression(&*member.expression);
+                let base = self.convert_expression(&member.expression);
                 format!("{}.{}", base, member.member_name)
             }
             Expression::IndexAccess(index) => {
-                let base = self.convert_expression(&*index.base);
-                let idx = self.convert_expression(&*index.index);
+                let base = self.convert_expression(&index.base);
+                let idx = self.convert_expression(&index.index);
                 format!("{}[{}]", base, idx)
             }
             Expression::Assignment(assign) => {
-                let left = self.convert_expression(&*assign.left);
-                let right = self.convert_expression(&*assign.right);
+                let left = self.convert_expression(&assign.left);
+                let right = self.convert_expression(&assign.right);
                 let op = self.map_assignment_operator(&assign.operator);
                 format!("{} {} {}", left, op, right)
             }
             Expression::Conditional(conditional) => {
-                let condition = self.convert_expression(&*conditional.condition);
-                let true_expr = self.convert_expression(&*conditional.true_expression);
-                let false_expr = self.convert_expression(&*conditional.false_expression);
+                let condition = self.convert_expression(&conditional.condition);
+                let true_expr = self.convert_expression(&conditional.true_expression);
+                let false_expr = self.convert_expression(&conditional.false_expression);
                 format!(
                     "if {} {{ {} }} else {{ {} }}",
                     condition, true_expr, false_expr
@@ -559,7 +559,7 @@ impl SolidityToBendConverter {
             }
             Expression::TypeConversion(conv) => {
                 let type_str = self.map_type(&conv.type_name);
-                let expr = self.convert_expression(&*conv.expression);
+                let expr = self.convert_expression(&conv.expression);
                 format!("{}({})", type_str, expr)
             }
             _ => "unknown_expression".to_string(),
@@ -571,8 +571,7 @@ impl SolidityToBendConverter {
         match type_name {
             TypeName::Elementary(elem) => self
                 .type_mappings
-                .get(&elem.name)
-                .map(|s| s.clone())
+                .get(&elem.name).cloned()
                 .unwrap_or_else(|| elem.name.clone()),
             TypeName::UserDefined(user) => {
                 // Handle type arguments
@@ -596,8 +595,8 @@ impl SolidityToBendConverter {
                 }
             }
             TypeName::Mapping(mapping) => {
-                let key_type = self.map_type(&*mapping.key_type);
-                let value_type = self.map_type(&*mapping.value_type);
+                let key_type = self.map_type(&mapping.key_type);
+                let value_type = self.map_type(&mapping.value_type);
                 format!("Map<{}, {}>", key_type, value_type)
             }
             TypeName::Function(func) => {
