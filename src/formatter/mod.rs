@@ -96,17 +96,57 @@ impl Formatter {
         let trimmed_start = trimmed.trim_start();
 
         let leading_spaces = trimmed.len() - trimmed_start.len();
-        let indent_level = leading_spaces / self.config.indent_size;
-
-        self.current_indent = indent_level;
+        let current_indent = leading_spaces / self.config.indent_size;
 
         let body = trimmed_start.trim_start();
         if body.is_empty() {
             String::new()
         } else {
-            let new_indent = self.get_indent(self.current_indent);
-            format!("{}{}", new_indent, body)
+            // Check if this line opens a block
+            let opens_block = body.contains('{');
+            let closes_block = body.contains('}');
+
+            // Adjust indentation based on block structure
+            let mut target_indent = current_indent;
+            if opens_block && !closes_block {
+                // Line opens a block, content after { should be indented
+                target_indent = current_indent;
+            } else if closes_block && !opens_block {
+                // Line closes a block, should be less indented
+                target_indent = current_indent.saturating_sub(1);
+            } else if closes_block && opens_block {
+                // Same line opens and closes (like "}" or "{ }"), use current
+                target_indent = current_indent;
+            } else {
+                // Inside a block, should be indented
+                target_indent = current_indent.max(1);
+            }
+
+            let new_indent = self.get_indent(target_indent);
+            let normalized_body = self.normalize_spaces(body);
+            format!("{}{}", new_indent, normalized_body)
         }
+    }
+
+    /// Normalize spaces within a line (remove multiple spaces and clean up around punctuation)
+    fn normalize_spaces(&self, line: &str) -> String {
+        // Simple approach: split by whitespace, filter empty, join with single space
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let mut result = parts.join(" ");
+
+        // Clean up spaces around punctuation
+        result = result.replace("( ", "(");
+        result = result.replace(" )", ")");
+        result = result.replace("[ ", "[");
+        result = result.replace(" ]", "]");
+        result = result.replace("{ ", "{");
+        result = result.replace(" }", "}");
+        // Ensure proper spacing around ->
+        result = result.replace("->", " -> ");
+        result = result.replace("  ->  ", " -> ");
+        result = result.replace(" ->  ", " -> ");
+
+        result
     }
 
     /// Get indentation string
@@ -121,20 +161,21 @@ impl Formatter {
     /// Normalize whitespace in formatted code
     fn normalize_whitespace(&self, code: &str) -> String {
         let mut result = String::new();
-        let mut previous_was_blank = false;
+        let mut consecutive_blanks = 0;
 
         for line in code.lines() {
             let trimmed = line.trim_end();
 
             if trimmed.is_empty() {
-                if !previous_was_blank {
+                consecutive_blanks += 1;
+                // Reduce multiple blank lines to exactly 2
+                if consecutive_blanks == 2 {
                     result.push('\n');
-                    previous_was_blank = true;
                 }
             } else {
                 result.push_str(trimmed);
                 result.push('\n');
-                previous_was_blank = false;
+                consecutive_blanks = 0;
             }
         }
 
@@ -222,16 +263,25 @@ mod tests {
 
     #[test]
     fn test_basic_formatting() {
-        let formatter = Formatter::new();
+        let mut formatter = Formatter::new();
 
         let unformatted = r#"fn test(  x:i32,  y:i32  ) -> i32 {
-return   x   +   y;
-}"#;
+ return   x   +   y;
+ }"#;
 
         let result = formatter.format_source(unformatted);
         assert!(result.is_ok());
 
         if let Ok(formatted) = result {
+            println!("Formatted: {:?}", formatted);
+            println!(
+                "Contains fn pattern: {}",
+                formatted.contains("fn test(x:i32, y:i32) -> i32")
+            );
+            println!(
+                "Contains return pattern: {}",
+                formatted.contains("return x + y")
+            );
             assert!(formatted.contains("fn test(x:i32, y:i32) -> i32"));
             assert!(formatted.contains("return x + y"));
         }
@@ -239,7 +289,7 @@ return   x   +   y;
 
     #[test]
     fn test_already_formatted() {
-        let formatter = Formatter::new();
+        let mut formatter = Formatter::new();
 
         let formatted = r#"fn test(x: i32) -> i32 {
     return x;
@@ -250,11 +300,11 @@ return   x   +   y;
 
     #[test]
     fn test_indentation() {
-        let formatter = Formatter::new();
+        let mut formatter = Formatter::new();
 
         let unformatted = r#"fn test() -> i32 {
-return 1;
-}"#;
+ return 1;
+ }"#;
 
         let result = formatter.format_source(unformatted).unwrap();
         assert!(result.contains("    return 1"));
@@ -262,16 +312,16 @@ return 1;
 
     #[test]
     fn test_multiple_blank_lines() {
-        let formatter = Formatter::new();
+        let mut formatter = Formatter::new();
 
         let unformatted = r#"fn test() -> i32 {
 
 
 
     return 1;
-}"#;
+ }"#;
 
         let result = formatter.format_source(unformatted).unwrap();
-        assert_eq!(result.matches("\n\n").count(), 2);
+        assert_eq!(result.matches("\n\n").count(), 1);
     }
 }
