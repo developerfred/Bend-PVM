@@ -73,6 +73,9 @@ pub mod events;
 // Logging framework
 pub mod logging;
 
+// Deployment tools
+pub mod deployment;
+
 use std::path::PathBuf;
 use thiserror::Error;
 
