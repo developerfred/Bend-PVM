@@ -690,7 +690,7 @@ impl GasProfiler {
     }
 
     /// Get cost for an operation
-    fn get_cost(&self, operation: &str) -> u64 {
+    pub fn get_cost(&self, operation: &str) -> u64 {
         *self.costs.get(operation).unwrap_or(&5)
     }
 }
