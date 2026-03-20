@@ -231,7 +231,10 @@ pub fn compile(source_path: &PathBuf, options: CompilerOptions) -> Result<(), Co
         p
     };
 
-    std::fs::write(bin_path, polkavm_module.binary.as_ref().unwrap())?;
+    let binary = polkavm_module
+        .binary
+        .ok_or_else(|| CompileError::Codegen("No binary generated".to_string()))?;
+    std::fs::write(bin_path, binary)?;
 
     Ok(())
 }

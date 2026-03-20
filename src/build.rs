@@ -167,7 +167,9 @@ impl BuildCache {
     /// Save cache to disk
     fn save(&self) -> BendResult<()> {
         let data = serde_json::to_string_pretty(&self.artifacts)?;
-        fs::create_dir_all(self.cache_path.parent().unwrap())?;
+        if let Some(parent) = self.cache_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
         fs::write(&self.cache_path, data)?;
         Ok(())
     }
@@ -635,9 +637,14 @@ pub mod build_functions {
 
     /// Build a single file
     pub fn build_file(source: &Path, output: &Path) -> BendResult<BuildArtifact> {
+        let output_dir = output
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| PathBuf::from("."));
+
         let config = BuildConfig {
             source_files: vec![source.to_path_buf()],
-            output_dir: output.parent().unwrap().to_path_buf(),
+            output_dir,
             ..Default::default()
         };
 
