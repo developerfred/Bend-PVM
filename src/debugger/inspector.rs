@@ -268,7 +268,7 @@ impl DebugInspector {
         Ok(if result { "true" } else { "false" }.to_string())
     }
 
-    fn find_operator<'a>(&self, expr: &str, ops: &[&str]) -> Option<usize> {
+    fn find_operator(&self, expr: &str, ops: &[&str]) -> Option<usize> {
         let mut depth: i32 = 0;
 
         for (i, c) in expr.char_indices().rev() {

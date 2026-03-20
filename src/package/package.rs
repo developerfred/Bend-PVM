@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Version {
@@ -34,8 +34,12 @@ impl Version {
 
         Ok(Version::new(major, minor, patch))
     }
+}
 
-    pub fn from_str(s: &str) -> Result<Self, PackageError> {
+impl std::str::FromStr for Version {
+    type Err = PackageError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse(s)
     }
 }

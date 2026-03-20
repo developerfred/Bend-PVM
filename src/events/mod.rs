@@ -7,8 +7,6 @@ mod event;
 pub use emitter::{EventEmitter, EventSubscription};
 pub use event::{Event, EventLevel};
 
-use std::collections::HashMap;
-
 /// Initialize the global event system
 pub fn init_event_system() -> EventEmitter {
     EventEmitter::new()

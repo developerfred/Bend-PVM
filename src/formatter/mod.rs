@@ -71,7 +71,7 @@ impl Formatter {
                 .last()
                 .map(|l| l.trim_end().ends_with('}'))
                 .unwrap_or(false);
-            let prev_line_ends_with_brace_or_is_fn = if result.len() >= 1 {
+            let prev_line_ends_with_brace_or_is_fn = if !result.is_empty() {
                 let prev = result.last().unwrap().trim();
                 prev.ends_with('}')
             } else {
@@ -84,11 +84,9 @@ impl Formatter {
                 && prev_line_ends_with_brace_or_is_fn
                 && !processed_line.is_empty()
                 && !result.is_empty()
-            {
-                if !result.last().unwrap().is_empty() {
+                && !result.last().unwrap().is_empty() {
                     result.push(String::new());
                 }
-            }
 
             if let Some(change) = indent_change {
                 if change > 0 {
