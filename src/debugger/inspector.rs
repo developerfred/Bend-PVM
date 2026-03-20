@@ -90,13 +90,202 @@ impl DebugInspector {
 
     /// Evaluate an expression in the current context
     pub fn evaluate(&self, expression: &str) -> Result<String, DebuggerError> {
-        // In a real implementation, this would parse and evaluate the expression
-        // in the context of the current state
-        // For now, just return an error
-        Err(DebuggerError::Generic(format!(
-            "Expression evaluation not implemented: {}",
-            expression
-        )))
+        let expr = expression.trim();
+        if expr.is_empty() {
+            return Err(DebuggerError::Generic("Empty expression".to_string()));
+        }
+
+        match self.eval_expression(expr) {
+            Ok(value) => Ok(value),
+            Err(e) => Err(DebuggerError::Generic(e)),
+        }
+    }
+
+    fn eval_expression(&self, expr: &str) -> Result<String, String> {
+        let expr = expr.trim();
+
+        // Try parsing as comparison first
+        if let Some(pos) = self.find_operator(expr, &["==", "!=", "<=", ">="]) {
+            let left = &expr[..pos];
+            let op = &expr[pos..pos + 2];
+            let right = &expr[pos + 2..];
+            return self.eval_comparison(left, op, right);
+        }
+
+        if let Some(pos) = self.find_operator(expr, &["<", ">"]) {
+            let left = &expr[..pos];
+            let op = &expr[pos..pos + 1];
+            let right = &expr[pos + 1..];
+            return self.eval_comparison(left, op, right);
+        }
+
+        // Try parsing as addition/subtraction
+        self.eval_add_sub(expr)
+    }
+
+    fn eval_add_sub(&self, expr: &str) -> Result<String, String> {
+        let expr = expr.trim();
+
+        let mut depth: i32 = 0;
+        let mut last_add_sub = None;
+
+        for (i, c) in expr.char_indices().rev() {
+            match c {
+                ')' => depth += 1,
+                '(' => depth = depth.saturating_sub(1),
+                '+' | '-' if depth == 0 => {
+                    if i > 0 {
+                        last_add_sub = Some(i);
+                    }
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(pos) = last_add_sub {
+            let left = &expr[..pos];
+            let op = expr[pos..=pos].to_string();
+            let right = &expr[pos + 1..];
+            let left_val = self
+                .eval_mul_div(left)?
+                .parse::<i64>()
+                .map_err(|_| "Invalid left operand")?;
+            let right_val = self
+                .eval_add_sub(right)?
+                .parse::<i64>()
+                .map_err(|_| "Invalid right operand")?;
+            let result = if op == "+" {
+                left_val + right_val
+            } else {
+                left_val - right_val
+            };
+            return Ok(result.to_string());
+        }
+
+        self.eval_mul_div(expr)
+    }
+
+    fn eval_mul_div(&self, expr: &str) -> Result<String, String> {
+        let expr = expr.trim();
+
+        let mut depth: i32 = 0;
+        let mut last_mul_div = None;
+
+        for (i, c) in expr.char_indices().rev() {
+            match c {
+                ')' => depth += 1,
+                '(' => depth = depth.saturating_sub(1),
+                '*' | '/' if depth == 0 => {
+                    last_mul_div = Some(i);
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(pos) = last_mul_div {
+            let left = &expr[..pos];
+            let op = expr[pos..=pos].to_string();
+            let right = &expr[pos + 1..];
+            let left_val = self
+                .eval_primary(left)?
+                .parse::<i64>()
+                .map_err(|_| "Invalid left operand")?;
+            let right_val = self
+                .eval_mul_div(right)?
+                .parse::<i64>()
+                .map_err(|_| "Invalid right operand")?;
+            let result = if op == "*" {
+                left_val * right_val
+            } else {
+                if right_val == 0 {
+                    return Err("Division by zero".to_string());
+                }
+                left_val / right_val
+            };
+            return Ok(result.to_string());
+        }
+
+        self.eval_primary(expr)
+    }
+
+    fn eval_primary(&self, expr: &str) -> Result<String, String> {
+        let expr = expr.trim();
+
+        // Handle parentheses
+        if expr.starts_with('(') && expr.ends_with(')') {
+            let inner = &expr[1..expr.len() - 1];
+            return self.eval_expression(inner);
+        }
+
+        // Try to parse as number
+        if let Ok(num) = expr.parse::<i64>() {
+            return Ok(num.to_string());
+        }
+
+        // Try to parse as boolean comparison result
+        if expr == "true" {
+            return Ok("true".to_string());
+        }
+        if expr == "false" {
+            return Ok("false".to_string());
+        }
+
+        // Try to look up variable
+        if let Some(value) = self.state.get_local_variable(expr) {
+            return Ok(value.to_string());
+        }
+
+        // Try to look up register
+        if let Some(value) = self.state.get_register(expr) {
+            return Ok(value.to_string());
+        }
+
+        Err(format!("Unknown identifier: {}", expr))
+    }
+
+    fn eval_comparison(&self, left: &str, op: &str, right: &str) -> Result<String, String> {
+        let left_val = self
+            .eval_add_sub(left)?
+            .parse::<i64>()
+            .map_err(|_| "Invalid left operand")?;
+        let right_val = self
+            .eval_add_sub(right)?
+            .parse::<i64>()
+            .map_err(|_| "Invalid right operand")?;
+
+        let result = match op {
+            "==" => left_val == right_val,
+            "!=" => left_val != right_val,
+            "<" => left_val < right_val,
+            ">" => left_val > right_val,
+            "<=" => left_val <= right_val,
+            ">=" => left_val >= right_val,
+            _ => return Err(format!("Unknown operator: {}", op)),
+        };
+
+        Ok(if result { "true" } else { "false" }.to_string())
+    }
+
+    fn find_operator<'a>(&self, expr: &str, ops: &[&str]) -> Option<usize> {
+        let mut depth: i32 = 0;
+
+        for (i, c) in expr.char_indices().rev() {
+            match c {
+                ')' => depth += 1,
+                '(' => depth = depth.saturating_sub(1),
+                _ if depth == 0 => {
+                    for op in ops {
+                        if expr[i..].starts_with(op) {
+                            return Some(i);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
     }
 
     /// Get the call stack
