@@ -383,8 +383,7 @@ impl DependencyResolver {
     }
 
     pub fn resolve(&self, package: &Package) -> Result<Vec<Package>, PackageError> {
-        let mut resolved = Vec::new();
-        resolved.push(package.clone());
+        let resolved = vec![package.clone()];
 
         for dep in package.dependencies() {
             if let Some(version) = self.packages.get(dep.name()) {

@@ -1,6 +1,7 @@
 #![allow(clippy::only_used_in_recursion)]
 
 use std::collections::{BTreeSet, HashMap};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use thiserror::Error;
 
 use crate::compiler::parser::ast::*;
@@ -267,11 +268,8 @@ impl ConstraintSolver {
 
 impl InferType {
     pub fn fresh_var(prefix: &str) -> Self {
-        static mut COUNTER: usize = 0;
-        let id = unsafe {
-            COUNTER += 1;
-            COUNTER
-        };
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
         InferType::Variable(format!("{}_{}", prefix, id))
     }
 

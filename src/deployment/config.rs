@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Deployment environment
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Environment {
+    #[default]
     Development,
     Testnet,
     Mainnet,
@@ -19,12 +20,6 @@ impl Environment {
             Environment::Testnet => "testnet",
             Environment::Mainnet => "mainnet",
         }
-    }
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        Environment::Development
     }
 }
 

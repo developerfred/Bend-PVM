@@ -27,6 +27,9 @@ pub enum FFIError {
 
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
+
+    #[error("Invalid arguments: {0}")]
+    InvalidArguments(String),
 }
 
 /// Function signature for external calls
@@ -317,6 +320,11 @@ impl FFIManager {
         // Simulate external call (in real implementation, this would make actual external call)
         match function_name {
             "console.log" => {
+                if args.is_empty() {
+                    return Err(FFIError::InvalidArguments(
+                        "console.log requires 1 argument".to_string(),
+                    ));
+                }
                 let message = ABICodec::decode_value(&args[0]);
                 println!("[CONSOLE] {}", message);
                 Ok(FFICallResult::Success(Vec::new()))
@@ -325,7 +333,7 @@ impl FFIManager {
                 // Return current timestamp (simplified)
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .map_err(|e| FFIError::CallFailed(e.to_string()))?
                     .as_secs();
                 Ok(FFICallResult::Success(timestamp.to_be_bytes().to_vec()))
             }
@@ -335,31 +343,61 @@ impl FFIManager {
                 Ok(FFICallResult::Success(block_number.to_be_bytes().to_vec()))
             }
             "string.concat" => {
+                if args.len() < 2 {
+                    return Err(FFIError::InvalidArguments(
+                        "string.concat requires 2 arguments".to_string(),
+                    ));
+                }
                 let s1 = ABICodec::decode_value(&args[0]);
                 let s2 = ABICodec::decode_value(&args[1]);
                 Ok(FFICallResult::Success(ABICodec::encode_value(&(s1 + &s2))))
             }
             "string.length" => {
+                if args.is_empty() {
+                    return Err(FFIError::InvalidArguments(
+                        "string.length requires 1 argument".to_string(),
+                    ));
+                }
                 let s = ABICodec::decode_value(&args[0]);
                 let len = s.len() as u64;
                 Ok(FFICallResult::Success(len.to_be_bytes().to_vec()))
             }
             "string.to_uppercase" => {
+                if args.is_empty() {
+                    return Err(FFIError::InvalidArguments(
+                        "string.to_uppercase requires 1 argument".to_string(),
+                    ));
+                }
                 let s = ABICodec::decode_value(&args[0]);
                 let result = StringUtils::to_uppercase(&s);
                 Ok(FFICallResult::Success(ABICodec::encode_value(&result)))
             }
             "string.to_lowercase" => {
+                if args.is_empty() {
+                    return Err(FFIError::InvalidArguments(
+                        "string.to_lowercase requires 1 argument".to_string(),
+                    ));
+                }
                 let s = ABICodec::decode_value(&args[0]);
                 let result = StringUtils::to_lowercase(&s);
                 Ok(FFICallResult::Success(ABICodec::encode_value(&result)))
             }
             "string.trim" => {
+                if args.is_empty() {
+                    return Err(FFIError::InvalidArguments(
+                        "string.trim requires 1 argument".to_string(),
+                    ));
+                }
                 let s = ABICodec::decode_value(&args[0]);
                 let result = StringUtils::trim(&s);
                 Ok(FFICallResult::Success(ABICodec::encode_value(&result)))
             }
             "string.contains" => {
+                if args.len() < 2 {
+                    return Err(FFIError::InvalidArguments(
+                        "string.contains requires 2 arguments".to_string(),
+                    ));
+                }
                 let s = ABICodec::decode_value(&args[0]);
                 let sub = ABICodec::decode_value(&args[1]);
                 let result = if StringUtils::contains(&s, &sub) {

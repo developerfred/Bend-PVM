@@ -318,6 +318,52 @@ pub fn generate_riscv_from_source(
     Ok(code)
 }
 
+/// Compile source code directly without writing to a file
+/// Returns the compiled binary or error
+pub fn compile_from_source(
+    source: &str,
+    options: CompilerOptions,
+) -> Result<Vec<u8>, CompileError> {
+    // Parse
+    let _lexer = BendLexer::new(source);
+    let mut parser = Parser::new(source);
+    let program = parser
+        .parse_program()
+        .map_err(|e| CompileError::Parse(e.to_string()))?;
+
+    // Type Check
+    if options.type_check {
+        let mut type_checker = TypeChecker::new();
+        type_checker
+            .check_program(&program)
+            .map_err(|e| CompileError::Type(e.to_string()))?;
+    }
+
+    // Optimize
+    let optimized_program = if options.optimize {
+        let mut manager = create_default_manager();
+        manager
+            .optimize(program)
+            .map_err(|e| CompileError::Optimization(e.to_string()))?
+    } else {
+        program
+    };
+
+    // Generate Code
+    let mut generator = RiscVCodegen::new();
+    let code = generator
+        .generate(&optimized_program)
+        .map_err(|e| CompileError::Codegen(e.to_string()))?;
+
+    // Compile to PolkaVM
+    let polkavm_module =
+        compile_to_polkavm(&code, None).map_err(|e| CompileError::PolkaVM(e.to_string()))?;
+
+    polkavm_module
+        .binary
+        .ok_or_else(|| CompileError::Codegen("No binary generated".to_string()))
+}
+
 /// Returns the current version of the compiler
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
