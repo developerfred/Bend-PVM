@@ -50,8 +50,8 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
         document_symbol_provider: Some(OneOf::Left(true)),
         workspace_symbol_provider: Some(OneOf::Left(true)),
         code_action_provider: Some(CodeActionOptions {
-            code_action_kinds: Some(vec![CodeActionKind::QUICK_FIX, CodeActionKind::REFACTOR]),
-            ..CodeActionOptions::default()
+            code_action_kinds: Some(vec![CodeActionKind::QUICKFIX, CodeActionKind::REFACTOR]),
+            ..Default::default()
         }),
         semantic_tokens_provider: Some(SemanticTokensOptions {
             legend: SemanticTokensLegend {
@@ -71,9 +71,9 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
                     SemanticTokenModifier::READONLY,
                 ],
             },
-            full: Some(SemanticTokensFullOptions::bool(true)),
+            full: Some(true),
             range: Some(true),
-            ..SemanticTokensOptions::default()
+            ..Default::default()
         }),
         inlay_hint_provider: Some(OneOf::Left(true)),
         document_formatting_provider: Some(OneOf::Left(true)),

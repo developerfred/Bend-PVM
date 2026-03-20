@@ -200,6 +200,7 @@ name = "bend-pvm-lsp"
 version = "0.1.0"
 dependencies = [
  "bend-pvm",
+ "lru_time_cache",
  "lsp-server",
  "lsp-types",
  "serde",
@@ -798,6 +799,12 @@ checksum = "dbfc0d229f1f42d790440136d941afd806bc9e949e2bcb8faa813b0f00d1267e"
 dependencies = [
  "logos-codegen",
 ]
+
+[[package]]
+name = "lru_time_cache"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adb241df5c4caeb888755363fc95f8a896618dc0d435e9e775f7930cb099beab"
 
 [[package]]
 name = "lsp-server"
