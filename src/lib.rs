@@ -50,6 +50,7 @@ pub mod runtime {
     pub mod env;
     pub mod memory;
     pub mod metering;
+    pub mod proxy;
     pub mod storage;
 }
 
