@@ -67,6 +67,15 @@ pub mod analyzer;
 // Package manager
 pub mod package;
 
+// Event system
+pub mod events;
+
+// Logging framework
+pub mod logging;
+
+// Deployment tools
+pub mod deployment;
+
 use std::path::PathBuf;
 use thiserror::Error;
 
