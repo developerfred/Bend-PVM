@@ -1,3 +1,8 @@
+//! Standard library for Bend-PVM
+//!
+//! Provides built-in functions and utilities including math, crypto,
+//! string manipulation, collections, datetime, and network operations.
+
 pub mod collections;
 pub mod core;
 pub mod crypto;
