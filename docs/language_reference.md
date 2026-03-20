@@ -1,5 +1,28 @@
 # Bend-PVM Language Reference
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Syntax Basics](#syntax-basics)
+  - [Comments](#comments)
+  - [Data Types](#data-types)
+  - [Variables and Assignments](#variables-and-assignments)
+  - [Functions](#functions)
+  - [Control Flow](#control-flow)
+- [Resource Model](#resource-model)
+- [Monadic Composition](#monadic-composition)
+- [Pattern Matching](#pattern-matching)
+- [Libraries and Imports](#libraries-and-imports)
+  - [Import Statements](#import-statements)
+  - [Standard Library](#standard-library)
+- [Contract Structure](#contract-structure)
+- [Best Practices](#best-practices)
+- [Advanced Features](#advanced-features)
+  - [Recursive Types](#recursive-types)
+  - [Higher-Order Functions](#higher-order-functions)
+  - [Lambda Expressions](#lambda-expressions)
+- [Conclusion](#conclusion)
+
 ## Introduction
 
 Bend-PVM is a new smart contract programming language designed for the PolkaVM runtime. It focuses on safety, efficiency, and expressive power, making it ideal for developing secure and resource-efficient smart contracts.

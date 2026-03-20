@@ -387,8 +387,8 @@ mod tests {
         let mut formatter = Formatter::new();
 
         let unformatted = r#"fn test(  x:i32,  y:i32  ) -> i32 {
- return   x   +   y;
- }"#;
+  return   x   +   y;
+  }"#;
 
         let result = formatter.format_source(unformatted);
         assert!(result.is_ok());
