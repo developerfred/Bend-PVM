@@ -1,3 +1,8 @@
+//! Bend source code formatter
+//!
+//! Provides automatic formatting for Bend source files with configurable
+//! style options including indentation, line length, and spacing rules.
+
 use std::fs;
 use std::path::Path;
 
@@ -84,9 +89,10 @@ impl Formatter {
                 && prev_line_ends_with_brace_or_is_fn
                 && !processed_line.is_empty()
                 && !result.is_empty()
-                && !result.last().unwrap().is_empty() {
-                    result.push(String::new());
-                }
+                && !result.last().unwrap().is_empty()
+            {
+                result.push(String::new());
+            }
 
             if let Some(change) = indent_change {
                 if change > 0 {

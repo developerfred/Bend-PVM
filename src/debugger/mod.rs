@@ -1,3 +1,8 @@
+//! Debugger for Bend-PVM programs
+//!
+//! Provides debugging capabilities including breakpoints, step-through execution,
+//! variable inspection, and execution state tracking.
+
 pub mod breakpoint;
 pub mod disassembler;
 pub mod inspector;
