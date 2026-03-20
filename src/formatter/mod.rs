@@ -397,13 +397,13 @@ mod tests {
             println!("Formatted: {:?}", formatted);
             println!(
                 "Contains fn pattern: {}",
-                formatted.contains("fn test(x:i32, y:i32) -> i32")
+                formatted.contains("fn test(x: i32, y: i32) -> i32")
             );
             println!(
                 "Contains return pattern: {}",
                 formatted.contains("return x + y")
             );
-            assert!(formatted.contains("fn test(x:i32, y:i32) -> i32"));
+            assert!(formatted.contains("fn test(x: i32, y: i32) -> i32"));
             assert!(formatted.contains("return x + y"));
         }
     }
