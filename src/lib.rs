@@ -64,6 +64,9 @@ pub mod testing;
 // Analyzer tools
 pub mod analyzer;
 
+// Package manager
+pub mod package;
+
 use std::path::PathBuf;
 use thiserror::Error;
 
