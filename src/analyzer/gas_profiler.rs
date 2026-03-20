@@ -66,6 +66,12 @@ pub struct GasProfiler {
     costs: HashMap<String, u64>,
 }
 
+impl Default for GasProfiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GasProfiler {
     /// Create a new gas profiler
     pub fn new() -> Self {
@@ -116,18 +122,15 @@ impl GasProfiler {
         let mut estimates = Vec::new();
 
         for definition in &program.definitions {
-            match definition {
-                Definition::FunctionDef { name, body, .. } => {
-                    // Skip internal functions (starting with underscore)
-                    if name.starts_with('_') {
-                        continue;
-                    }
-
-                    // Profile the function
-                    let estimate = self.profile_function(name, body, &program);
-                    estimates.push(estimate);
+            if let Definition::FunctionDef { name, body, .. } = definition {
+                // Skip internal functions (starting with underscore)
+                if name.starts_with('_') {
+                    continue;
                 }
-                _ => {}
+
+                // Profile the function
+                let estimate = self.profile_function(name, body, &program);
+                estimates.push(estimate);
             }
         }
 
@@ -148,14 +151,14 @@ impl GasProfiler {
     }
 
     /// Profile a function for gas usage
-    fn profile_function(&self, name: &str, body: &Block, program: &Program) -> GasEstimate {
+    fn profile_function(&self, name: &str, body: &Block, _program: &Program) -> GasEstimate {
         let mut cost_breakdown = HashMap::new();
 
         // Add base cost for the function
         cost_breakdown.insert("function_overhead".to_string(), 20);
 
         // Calculate costs for the function body
-        let body_cost = self.profile_block(body, &mut cost_breakdown);
+        let _body_cost = self.profile_block(body, &mut cost_breakdown);
 
         // Determine if the function is recursive
         let is_recursive = self.is_function_recursive(name, body);
@@ -212,7 +215,9 @@ impl GasProfiler {
 
                 return_cost + value_cost
             }
-            Statement::Assignment { pattern, value, .. } => {
+            Statement::Assignment {
+                pattern: _, value, ..
+            } => {
                 let assignment_cost = 10;
                 let pattern_cost = 5; // Simplified, should depend on pattern complexity
                 let value_cost = self.profile_expr(value, cost_breakdown);
@@ -388,7 +393,7 @@ impl GasProfiler {
             }
             Expr::BinaryOp {
                 left,
-                operator,
+                operator: _,
                 right,
                 ..
             } => {
@@ -508,7 +513,7 @@ impl GasProfiler {
 
                     if else_body
                         .as_ref()
-                        .map_or(false, |b| self.contains_call_to(b, function_name))
+                        .is_some_and(|b| self.contains_call_to(b, function_name))
                     {
                         return true;
                     }

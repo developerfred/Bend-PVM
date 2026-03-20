@@ -49,32 +49,34 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
         workspace_symbol_provider: Some(OneOf::Left(true)),
-        code_action_provider: Some(CodeActionOptions {
-            code_action_kinds: Some(vec![CodeActionKind::QUICK_FIX, CodeActionKind::REFACTOR]),
-            ..CodeActionOptions::default()
-        }),
-        semantic_tokens_provider: Some(SemanticTokensOptions {
-            legend: SemanticTokensLegend {
-                token_types: vec![
-                    SemanticTokenType::KEYWORD,
-                    SemanticTokenType::TYPE,
-                    SemanticTokenType::FUNCTION,
-                    SemanticTokenType::VARIABLE,
-                    SemanticTokenType::STRING,
-                    SemanticTokenType::NUMBER,
-                    SemanticTokenType::COMMENT,
-                    SemanticTokenType::OPERATOR,
-                ],
-                token_modifiers: vec![
-                    SemanticTokenModifier::DECLARATION,
-                    SemanticTokenModifier::DEFINITION,
-                    SemanticTokenModifier::READONLY,
-                ],
+        code_action_provider: Some(CodeActionProviderCapability::Options(CodeActionOptions {
+            code_action_kinds: Some(vec![CodeActionKind::QUICKFIX, CodeActionKind::REFACTOR]),
+            ..Default::default()
+        })),
+        semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(
+            SemanticTokensOptions {
+                legend: SemanticTokensLegend {
+                    token_types: vec![
+                        SemanticTokenType::KEYWORD,
+                        SemanticTokenType::TYPE,
+                        SemanticTokenType::FUNCTION,
+                        SemanticTokenType::VARIABLE,
+                        SemanticTokenType::STRING,
+                        SemanticTokenType::NUMBER,
+                        SemanticTokenType::COMMENT,
+                        SemanticTokenType::OPERATOR,
+                    ],
+                    token_modifiers: vec![
+                        SemanticTokenModifier::DECLARATION,
+                        SemanticTokenModifier::DEFINITION,
+                        SemanticTokenModifier::READONLY,
+                    ],
+                },
+                full: Some(SemanticTokensFullOptions::Bool(true)),
+                range: Some(true),
+                ..Default::default()
             },
-            full: Some(SemanticTokensFullOptions::bool(true)),
-            range: Some(true),
-            ..SemanticTokensOptions::default()
-        }),
+        )),
         inlay_hint_provider: Some(OneOf::Left(true)),
         document_formatting_provider: Some(OneOf::Left(true)),
         ..ServerCapabilities::default()
@@ -185,7 +187,7 @@ fn handle_request(
             connection.sender.send(Message::Response(resp))?;
         }
         "textDocument/inlayHint" => {
-            let params = serde_json::from_value::<InlayHintsParams>(req.params.clone())?;
+            let params = serde_json::from_value::<InlayHintParams>(req.params.clone())?;
             let hints = get_inlay_hints(&params);
             let resp = Response {
                 id: req.id,
@@ -297,35 +299,35 @@ fn publish_diagnostics(
                 source: Some("bend-pvm".to_string()),
                 ..Diagnostic::default()
             },
-            ParseError::UnterminatedString { line, column } => Diagnostic {
+            ParseError::LexicalError(msg) => Diagnostic {
                 range: Range {
                     start: Position {
-                        line: (line - 1) as u32,
-                        character: (column - 1) as u32,
+                        line: 0,
+                        character: 0,
                     },
                     end: Position {
-                        line: (line - 1) as u32,
-                        character: column as u32,
+                        line: 0,
+                        character: 1,
                     },
                 },
                 severity: Some(DiagnosticSeverity::ERROR),
-                message: "Unterminated string literal".to_string(),
+                message: format!("Lexical error: {}", msg),
                 source: Some("bend-pvm".to_string()),
                 ..Diagnostic::default()
             },
-            ParseError::InvalidNumber { line, column } => Diagnostic {
+            ParseError::InvalidPattern(msg) => Diagnostic {
                 range: Range {
                     start: Position {
-                        line: (line - 1) as u32,
-                        character: (column - 1) as u32,
+                        line: 0,
+                        character: 0,
                     },
                     end: Position {
-                        line: (line - 1) as u32,
-                        character: column as u32,
+                        line: 0,
+                        character: 1,
                     },
                 },
                 severity: Some(DiagnosticSeverity::ERROR),
-                message: "Invalid number format".to_string(),
+                message: format!("Invalid pattern: {}", msg),
                 source: Some("bend-pvm".to_string()),
                 ..Diagnostic::default()
             },
@@ -726,7 +728,7 @@ fn convert_definition_to_symbol(def: &Definition, uri: &Url) -> Option<DocumentS
 
             Some(DocumentSymbol {
                 name: name.clone(),
-                kind: SymbolKind::TYPE_ALIAS,
+                kind: SymbolKind::CLASS,
                 tags: None,
                 detail: None,
                 range,
@@ -783,22 +785,16 @@ fn get_workspace_symbols(_params: &WorkspaceSymbolParams) -> Option<Vec<Workspac
 }
 
 fn get_semantic_tokens(_params: &SemanticTokensParams) -> Option<SemanticTokensResult> {
-    Some(SemanticTokensResult::Partial(SemanticTokens {
-        data: Vec::new(),
-        result_id: None,
-    }))
+    None
 }
 
 fn get_semantic_tokens_range(
     _params: &SemanticTokensRangeParams,
 ) -> Option<SemanticTokensRangeResult> {
-    Some(SemanticTokensRangeResult::Partial(SemanticTokens {
-        data: Vec::new(),
-        result_id: None,
-    }))
+    None
 }
 
-fn get_inlay_hints(_params: &InlayHintsParams) -> Option<Vec<InlayHint>> {
+fn get_inlay_hints(_params: &InlayHintParams) -> Option<Vec<InlayHint>> {
     Some(Vec::new())
 }
 
@@ -904,7 +900,7 @@ mod tests {
 
     #[test]
     fn test_get_inlay_hints_returns_empty() {
-        let params = InlayHintsParams::new(
+        let params = InlayHintParams::new(
             TextDocumentIdentifier::new(Url::parse("file:///test.bend").unwrap()),
             Range::new(Position::new(0, 0), Position::new(10, 0)),
             None,
