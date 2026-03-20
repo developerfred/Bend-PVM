@@ -86,7 +86,7 @@ impl PolkaVMModule {
 
         self.binary = Some(binary);
 
-        Ok(self.binary.as_ref().unwrap())
+        Ok(self.binary.as_ref().expect("Binary was just set above"))
     }
 
     /// Mock function to simulate assembling
@@ -120,7 +120,10 @@ impl PolkaVMModule {
             self.compile()?;
         }
 
-        let binary = self.binary.as_ref().unwrap();
+        let binary = self
+            .binary
+            .as_ref()
+            .expect("Binary was just compiled above");
 
         std::fs::write(path, binary).map_err(|e| PolkaVMError::WriteError(e.to_string()))?;
 
@@ -153,4 +156,64 @@ pub fn compile_to_polkavm(
     }
 
     Ok(module)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_polka_module_new() {
+        let module = PolkaVMModule::new("test assembly".to_string());
+        assert_eq!(module.assembly, "test assembly");
+        assert!(module.file_path.is_none());
+        assert!(module.binary.is_none());
+    }
+
+    #[test]
+    fn test_polka_vm_error_display() {
+        assert_eq!(
+            PolkaVMError::Generic("test".to_string()).to_string(),
+            "PolkaVM error: test"
+        );
+        assert_eq!(
+            PolkaVMError::BinaryGenerationError("fail".to_string()).to_string(),
+            "Failed to generate binary: fail"
+        );
+        assert_eq!(
+            PolkaVMError::LinkError("link fail".to_string()).to_string(),
+            "Failed to link: link fail"
+        );
+        assert_eq!(
+            PolkaVMError::WriteError("write fail".to_string()).to_string(),
+            "Failed to write output: write fail"
+        );
+    }
+
+    #[test]
+    fn test_polka_module_compile() {
+        let mut module = PolkaVMModule::new("test assembly".to_string());
+        let result = module.compile();
+        assert!(result.is_ok());
+        let binary = result.unwrap();
+        assert!(!binary.is_empty());
+        assert!(module.binary.is_some());
+    }
+
+    #[test]
+    fn test_polka_module_compile_caches_binary() {
+        let mut module = PolkaVMModule::new("test assembly".to_string());
+
+        let result1 = module.compile();
+        assert!(result1.is_ok());
+        let binary1 = result1.unwrap();
+        let len1 = binary1.len();
+
+        let result2 = module.compile();
+        assert!(result2.is_ok());
+        let binary2 = result2.unwrap();
+        let len2 = binary2.len();
+
+        assert_eq!(len1, len2);
+    }
 }
