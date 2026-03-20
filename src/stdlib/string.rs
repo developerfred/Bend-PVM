@@ -207,3 +207,116 @@ impl Format {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_utils_basic() {
+        assert_eq!(StringUtils::len("hello"), 5);
+        assert!(StringUtils::is_empty(""));
+        assert!(!StringUtils::is_empty("x"));
+        assert_eq!(StringUtils::to_uppercase("hello"), "HELLO");
+        assert_eq!(StringUtils::to_lowercase("HELLO"), "hello");
+    }
+
+    #[test]
+    fn test_string_utils_trim() {
+        assert_eq!(StringUtils::trim("  hello  "), "hello");
+        assert_eq!(StringUtils::trim_start("  hello"), "hello");
+        assert_eq!(StringUtils::trim_end("hello  "), "hello");
+    }
+
+    #[test]
+    fn test_string_utils_contains() {
+        assert!(StringUtils::starts_with("hello", "he"));
+        assert!(!StringUtils::starts_with("hello", "lo"));
+        assert!(StringUtils::ends_with("hello", "lo"));
+        assert!(!StringUtils::ends_with("hello", "he"));
+        assert!(StringUtils::contains("hello", "ell"));
+        assert!(!StringUtils::contains("hello", "world"));
+    }
+
+    #[test]
+    fn test_string_utils_find() {
+        assert_eq!(StringUtils::find("hello", "ell"), 1);
+        assert_eq!(StringUtils::find("hello", "world"), -1);
+    }
+
+    #[test]
+    fn test_string_utils_substring() {
+        assert_eq!(
+            StringUtils::substring("hello", 0, 3),
+            Some("hel".to_string())
+        );
+        assert_eq!(StringUtils::substring("hello", 0, 10), None);
+        assert_eq!(
+            StringUtils::substring("hello", 3, 5),
+            Some("lo".to_string())
+        );
+    }
+
+    #[test]
+    fn test_string_utils_split_join() {
+        assert_eq!(StringUtils::split("a,b,c", ","), vec!["a", "b", "c"]);
+        assert_eq!(
+            StringUtils::join(&["a".to_string(), "b".to_string(), "c".to_string()], "-"),
+            "a-b-c"
+        );
+    }
+
+    #[test]
+    fn test_string_utils_replace_repeat_reverse() {
+        assert_eq!(StringUtils::replace("hello", "l", "r"), "herro");
+        assert_eq!(StringUtils::repeat("ab", 3), "ababab");
+        assert_eq!(StringUtils::reverse("hello"), "olleh");
+    }
+
+    #[test]
+    fn test_string_utils_bytes() {
+        assert_eq!(StringUtils::to_bytes("hello"), b"hello".to_vec());
+        assert_eq!(StringUtils::from_bytes(b"hello"), "hello");
+    }
+
+    #[test]
+    fn test_string_utils_hex() {
+        let encoded = StringUtils::hex_encode("hello");
+        assert_eq!(encoded, "68656c6c6f");
+        assert_eq!(
+            StringUtils::hex_decode("68656c6c6f"),
+            Some("hello".to_string())
+        );
+        assert_eq!(StringUtils::hex_decode("invalid"), None);
+    }
+
+    #[test]
+    fn test_string_utils_base64() {
+        let encoded = StringUtils::base64_encode("hello");
+        assert_eq!(encoded, "aGVsbG8=");
+        assert_eq!(
+            StringUtils::base64_decode("aGVsbG8="),
+            Some("hello".to_string())
+        );
+        assert!(StringUtils::base64_decode("!!!").is_none());
+    }
+
+    #[test]
+    fn test_string_utils_hash() {
+        let sha = StringUtils::sha256("hello");
+        assert_eq!(sha.len(), 64);
+
+        let keccak = StringUtils::keccak256("hello");
+        assert_eq!(keccak.len(), 64);
+    }
+
+    #[test]
+    fn test_format_tx_hash() {
+        assert_eq!(
+            Format::tx_hash("0x1234567890abcdef1234"),
+            "0x12345678...1234"
+        );
+        assert_eq!(Format::tx_hash("short"), "short");
+        assert_eq!(Format::tx_hash("1234567890abcdef"), "1234567890...cdef");
+    }
+}

@@ -377,3 +377,109 @@ impl MeteringContext {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gas_costs_default() {
+        let costs = GasCosts::default();
+        assert_eq!(costs.base, 1_000);
+        assert_eq!(costs.input_byte, 1);
+        assert_eq!(costs.storage_read, 100);
+        assert_eq!(costs.storage_write, 1_000);
+    }
+
+    #[test]
+    fn test_proof_size_costs_default() {
+        let costs = ProofSizeCosts::default();
+        assert_eq!(costs.base, 100);
+        assert_eq!(costs.storage_read, 10);
+    }
+
+    #[test]
+    fn test_storage_deposit_costs_default() {
+        let costs = StorageDepositCosts::default();
+        assert_eq!(costs.byte, 100_000);
+    }
+
+    #[test]
+    fn test_metering_context_new() {
+        let ctx = MeteringContext::new(1_000_000, 100_000, 1_000_000_000);
+        assert_eq!(ctx.gas_limit, 1_000_000);
+        assert_eq!(ctx.gas_used, 0);
+        assert_eq!(ctx.proof_size_limit, 100_000);
+        assert_eq!(ctx.proof_size_used, 0);
+        assert_eq!(ctx.instruction_count, 0);
+    }
+
+    #[test]
+    fn test_charge_gas_success() {
+        let mut ctx = MeteringContext::new(1000, 100, 1000);
+        assert!(ctx.charge_gas(500).is_ok());
+        assert_eq!(ctx.gas_used, 500);
+    }
+
+    #[test]
+    fn test_charge_gas_exceeds_limit() {
+        let mut ctx = MeteringContext::new(1000, 100, 1000);
+        assert!(ctx.charge_gas(500).is_ok());
+        assert!(ctx.charge_gas(600).is_err());
+        assert_eq!(ctx.gas_used, 500);
+    }
+
+    #[test]
+    fn test_charge_gas_saturating() {
+        let mut ctx = MeteringContext::new(1000, 100, 1000);
+        assert!(ctx.charge_gas(500).is_ok());
+        assert!(ctx.charge_gas(u64::MAX).is_err());
+        assert_eq!(ctx.gas_used, 500);
+    }
+
+    #[test]
+    fn test_charge_storage_read() {
+        let mut ctx = MeteringContext::new(1_000_000, 100, 1_000_000);
+        assert!(ctx.charge_storage_read(b"key").is_ok());
+        assert!(ctx.charge_storage_read(b"key2").is_ok());
+    }
+
+    #[test]
+    fn test_charge_storage_write() {
+        let mut ctx = MeteringContext::new(1_000_000, 100, 1_000_000);
+        assert!(ctx.charge_storage_write(b"key", b"value").is_ok());
+    }
+
+    #[test]
+    fn test_charge_call() {
+        let mut ctx = MeteringContext::new(1_000_000, 1000, 1_000_000);
+        assert!(ctx.charge_call(b"input", 5000).is_ok());
+    }
+
+    #[test]
+    fn test_charge_event() {
+        let mut ctx = MeteringContext::new(1_000_000, 100, 1_000_000);
+        let topics = vec![b"topic1".to_vec(), b"topic2".to_vec()];
+        assert!(ctx.charge_event(&topics, b"data").is_ok());
+    }
+
+    #[test]
+    fn test_charge_instruction() {
+        let mut ctx = MeteringContext::new(1_000_000, 100, 1_000_000);
+        assert!(ctx.charge_instruction(100).is_ok());
+        assert_eq!(ctx.instruction_count, 100);
+    }
+
+    #[test]
+    fn test_metering_error_display() {
+        assert_eq!(MeteringError::OutOfGas.to_string(), "Gas limit exceeded");
+        assert_eq!(
+            MeteringError::ProofSizeLimitExceeded.to_string(),
+            "Proof size limit exceeded"
+        );
+        assert_eq!(
+            MeteringError::StorageDepositLimitExceeded.to_string(),
+            "Storage deposit limit exceeded"
+        );
+    }
+}

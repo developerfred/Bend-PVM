@@ -603,3 +603,176 @@ pub fn generate_math_ast() -> Vec<Definition> {
 
     definitions
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_math_constants() {
+        let constants = MathConstants::default();
+        assert!((constants.pi - std::f32::consts::PI).abs() < f32::EPSILON);
+        assert!((constants.e - std::f32::consts::E).abs() < f32::EPSILON);
+        assert!((constants.sqrt2 - std::f32::consts::SQRT_2).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_math_functions_basic() {
+        let math = MathFunctions::new();
+
+        assert_eq!(math.abs(-5.0), 5.0);
+        assert_eq!(math.abs(5.0), 5.0);
+        assert_eq!(math.abs(0.0), 0.0);
+
+        assert_eq!(math.sqrt(4.0), 2.0);
+        assert_eq!(math.cbrt(8.0), 2.0);
+
+        assert_eq!(math.pow(2.0, 3.0), 8.0);
+        assert_eq!(math.exp(0.0), 1.0);
+
+        assert_eq!(math.floor(3.7), 3.0);
+        assert_eq!(math.ceil(3.2), 4.0);
+        assert_eq!(math.round(3.5), 4.0);
+        assert_eq!(math.trunc(3.9), 3.0);
+    }
+
+    #[test]
+    fn test_math_functions_trig() {
+        let math = MathFunctions::new();
+
+        let angle = std::f32::consts::FRAC_PI_4;
+        assert!((math.sin(angle).powi(2) + math.cos(angle).powi(2) - 1.0).abs() < f32::EPSILON);
+
+        assert_eq!(math.atan2(1.0, 1.0), std::f32::consts::FRAC_PI_4);
+    }
+
+    #[test]
+    fn test_math_functions_hyperbolic() {
+        let math = MathFunctions::new();
+
+        let x = 1.0;
+        assert!((math.cosh(x).powi(2) - math.sinh(x).powi(2) - 1.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_math_functions_comparison() {
+        let math = MathFunctions::new();
+
+        assert_eq!(math.min(3.0, 5.0), 3.0);
+        assert_eq!(math.max(3.0, 5.0), 5.0);
+        assert_eq!(math.clamp(10.0, 0.0, 5.0), 5.0);
+        assert_eq!(math.clamp(-1.0, 0.0, 5.0), 0.0);
+        assert_eq!(math.clamp(3.0, 0.0, 5.0), 3.0);
+    }
+
+    #[test]
+    fn test_math_functions_nan_infinite() {
+        let math = MathFunctions::new();
+
+        assert!(math.is_nan(f32::NAN));
+        assert!(!math.is_nan(1.0));
+        assert!(math.is_infinite(f32::INFINITY));
+        assert!(!math.is_infinite(1.0));
+        assert!(math.is_finite(1.0));
+        assert!(!math.is_finite(f32::INFINITY));
+    }
+
+    #[test]
+    fn test_safe_math_add() {
+        assert_eq!(SafeMath::add(1, 2), Ok(3));
+        assert_eq!(
+            SafeMath::add(u128::MAX, 1),
+            Err("Addition overflow".to_string())
+        );
+    }
+
+    #[test]
+    fn test_safe_math_sub() {
+        assert_eq!(SafeMath::sub(5, 3), Ok(2));
+        assert_eq!(
+            SafeMath::sub(3, 5),
+            Err("Subtraction underflow".to_string())
+        );
+    }
+
+    #[test]
+    fn test_safe_math_mul() {
+        assert_eq!(SafeMath::mul(3, 4), Ok(12));
+        assert_eq!(
+            SafeMath::mul(u128::MAX, 2),
+            Err("Multiplication overflow".to_string())
+        );
+    }
+
+    #[test]
+    fn test_safe_math_div() {
+        assert_eq!(SafeMath::div(10, 2), Ok(5));
+        assert_eq!(SafeMath::div(10, 0), Err("Division by zero".to_string()));
+    }
+
+    #[test]
+    fn test_safe_math_mod() {
+        assert_eq!(SafeMath::mod_(10, 3), Ok(1));
+        assert_eq!(SafeMath::mod_(10, 0), Err("Modulus by zero".to_string()));
+    }
+
+    #[test]
+    fn test_safe_math_pow() {
+        assert_eq!(SafeMath::pow(2, 10), Ok(1024));
+        assert_eq!(
+            SafeMath::pow(u128::MAX, 2),
+            Err("Power overflow".to_string())
+        );
+    }
+
+    #[test]
+    fn test_safe_math_wrapped() {
+        assert_eq!(SafeMath::add_wrapped(u128::MAX, 1), 0);
+        assert_eq!(SafeMath::sub_wrapped(0, 1), u128::MAX);
+        assert_eq!(SafeMath::mul_wrapped(u128::MAX, 2), u128::MAX - 1);
+    }
+
+    #[test]
+    fn test_bigint_math_from_u128() {
+        assert_eq!(BigIntMath::from_u128(0), vec![0u8; 16]);
+        assert_eq!(
+            BigIntMath::from_u128(1),
+            vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+    }
+
+    #[test]
+    fn test_bigint_math_to_u128() {
+        let bytes = vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        assert_eq!(BigIntMath::to_u128(&bytes), Ok(1));
+
+        let too_large = vec![1; 20];
+        assert!(BigIntMath::to_u128(&too_large).is_err());
+    }
+
+    #[test]
+    fn test_bigint_math_operations() {
+        let a = BigIntMath::from_u128(10);
+        let b = BigIntMath::from_u128(5);
+
+        let sum = BigIntMath::add(&a, &b);
+        assert_eq!(BigIntMath::to_u128(&sum), Ok(15));
+
+        let diff = BigIntMath::sub(&a, &b);
+        assert_eq!(BigIntMath::to_u128(&diff), Ok(5));
+
+        let prod = BigIntMath::mul(&a, &b);
+        assert_eq!(BigIntMath::to_u128(&prod), Ok(50));
+    }
+
+    #[test]
+    fn test_bigint_math_cmp() {
+        let a = BigIntMath::from_u128(10);
+        let b = BigIntMath::from_u128(5);
+        let c = BigIntMath::from_u128(10);
+
+        assert_eq!(BigIntMath::cmp(&a, &b), 1);
+        assert_eq!(BigIntMath::cmp(&b, &a), -1);
+        assert_eq!(BigIntMath::cmp(&a, &c), 0);
+    }
+}
