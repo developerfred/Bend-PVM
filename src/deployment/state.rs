@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Deployment status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum DeploymentStatus {
+    #[default]
     Pending,
     Compiling,
     Validating,
@@ -15,12 +16,6 @@ pub enum DeploymentStatus {
     Completed,
     Failed,
     Cancelled,
-}
-
-impl Default for DeploymentStatus {
-    fn default() -> Self {
-        DeploymentStatus::Pending
-    }
 }
 
 /// Deployment state tracking
