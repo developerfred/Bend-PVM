@@ -1,30 +1,12 @@
-//! Formatter module for Bend-PVM source code
-//!
-//! Provides code formatting capabilities including:
-//! - Indentation management
-//! - Whitespace normalization
-//! - Statement spacing
-//! - Block formatting
-
 use std::fs;
 use std::path::Path;
 
-/// Formatter configuration
 #[derive(Debug, Clone)]
 pub struct FormatterConfig {
-    /// Number of spaces per indentation level
     pub indent_size: usize,
-
-    /// Maximum line length
     pub max_line_length: usize,
-
-    /// Whether to use tabs instead of spaces
     pub use_tabs: bool,
-
-    /// Insert blank line after function definitions
     pub blank_line_after_fn: bool,
-
-    /// Insert space around operators
     pub space_around_operators: bool,
 }
 
@@ -40,117 +22,257 @@ impl Default for FormatterConfig {
     }
 }
 
-/// Formatter result
 #[derive(Debug, Clone)]
 pub enum FormatResult {
-    /// File was formatted successfully
     Formatted(String),
-    /// File was already formatted correctly
     AlreadyFormatted,
-    /// Format check failed - file needs formatting
     NeedsFormatting,
-    /// Format failed with error
     Error(String),
 }
 
-/// Main formatter struct
 pub struct Formatter {
     config: FormatterConfig,
-    current_indent: usize,
+    indent_stack: Vec<usize>,
 }
 
 impl Formatter {
-    /// Create a new formatter with default configuration
     pub fn new() -> Self {
         Self {
             config: FormatterConfig::default(),
-            current_indent: 0,
+            indent_stack: vec![0],
         }
     }
 
-    /// Create a formatter with custom configuration
     pub fn with_config(config: FormatterConfig) -> Self {
         Self {
             config,
-            current_indent: 0,
+            indent_stack: vec![0],
         }
     }
 
-    /// Format Bend-PVM source code
     pub fn format_source(&mut self, source: &str) -> Result<String, String> {
-        let mut result = String::new();
-        let lines = source.lines().collect::<Vec<_>>();
+        let lines: Vec<&str> = source.lines().collect();
+        let mut result: Vec<String> = Vec::new();
+        let mut i = 0;
 
-        for line in lines {
-            let formatted_line = self.format_line(line);
-            result.push_str(&formatted_line);
-            result.push('\n');
-        }
+        while i < lines.len() {
+            let line = lines[i].trim_end();
+            let trimmed = line.trim_start();
 
-        Ok(self.normalize_whitespace(&result))
-    }
-
-    /// Format a single line with proper indentation
-    fn format_line(&mut self, line: &str) -> String {
-        let trimmed = line.trim_end();
-        let trimmed_start = trimmed.trim_start();
-
-        let leading_spaces = trimmed.len() - trimmed_start.len();
-        let current_indent = leading_spaces / self.config.indent_size;
-
-        let body = trimmed_start.trim_start();
-        if body.is_empty() {
-            String::new()
-        } else {
-            // Check if this line opens a block
-            let opens_block = body.contains('{');
-            let closes_block = body.contains('}');
-
-            // Adjust indentation based on block structure
-            #[allow(unused_assignments)]
-            let mut target_indent = current_indent;
-            if opens_block && !closes_block {
-                // Line opens a block, content after { should be indented
-                target_indent = current_indent;
-            } else if closes_block && !opens_block {
-                // Line closes a block, should be less indented
-                target_indent = current_indent.saturating_sub(1);
-            } else if closes_block && opens_block {
-                // Same line opens and closes (like "}" or "{ }"), use current
-                target_indent = current_indent;
-            } else {
-                // Inside a block, should be indented
-                target_indent = current_indent.max(1);
+            if trimmed.is_empty() {
+                if !result.is_empty() && !result.last().unwrap().is_empty() {
+                    result.push(String::new());
+                }
+                i += 1;
+                continue;
             }
 
-            let new_indent = self.get_indent(target_indent);
-            let normalized_body = self.normalize_spaces(body);
-            format!("{}{}", new_indent, normalized_body)
+            let prev_ends_with_brace = result
+                .last()
+                .map(|l| l.trim_end().ends_with('}'))
+                .unwrap_or(false);
+            let prev_line_ends_with_brace_or_is_fn = if result.len() >= 1 {
+                let prev = result.last().unwrap().trim();
+                prev.ends_with('}')
+            } else {
+                false
+            };
+
+            let (processed_line, indent_change) = self.process_line(trimmed, prev_ends_with_brace);
+
+            if self.config.blank_line_after_fn
+                && prev_line_ends_with_brace_or_is_fn
+                && !processed_line.is_empty()
+                && !result.is_empty()
+            {
+                if !result.last().unwrap().is_empty() {
+                    result.push(String::new());
+                }
+            }
+
+            if let Some(change) = indent_change {
+                if change > 0 {
+                    let current = *self.indent_stack.last().unwrap();
+                    self.indent_stack.push(current + change as usize);
+                } else {
+                    for _ in 0..change.abs() {
+                        if self.indent_stack.len() > 1 {
+                            self.indent_stack.pop();
+                        }
+                    }
+                }
+            }
+
+            let indent_level = *self.indent_stack.last().unwrap();
+            let indent_str = self.get_indent(indent_level);
+            result.push(format!("{}{}", indent_str, processed_line));
+
+            i += 1;
         }
+
+        let joined = result.join("\n");
+        Ok(self.normalize_whitespace(&joined))
     }
 
-    /// Normalize spaces within a line (remove multiple spaces and clean up around punctuation)
-    fn normalize_spaces(&self, line: &str) -> String {
-        // Simple approach: split by whitespace, filter empty, join with single space
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        let mut result = parts.join(" ");
+    fn process_line(&self, line: &str, _prev_ends_with_brace: bool) -> (String, Option<isize>) {
+        let body = line.trim_start();
+        let opens_block = body.contains('{');
+        let closes_block = body.contains('}');
 
-        // Clean up spaces around punctuation
+        let normalized_body = self.normalize_spaces(body);
+        let indent_change = if opens_block && !closes_block {
+            Some(1)
+        } else if closes_block && !opens_block {
+            Some(-1)
+        } else {
+            None
+        };
+
+        (normalized_body, indent_change)
+    }
+
+    fn normalize_spaces(&self, line: &str) -> String {
+        let mut result = line.to_string();
+
+        result = result.replace("->", " -> ");
+
+        let re_multi_space = regex::Regex::new(r"\s{2,}").unwrap();
+        result = re_multi_space.replace_all(&result, " ").to_string();
+
+        result = self.normalize_params(&result);
+
+        result = self.normalize_operators(&result);
+
         result = result.replace("( ", "(");
         result = result.replace(" )", ")");
-        result = result.replace("[ ", "[");
-        result = result.replace(" ]", "]");
         result = result.replace("{ ", "{");
         result = result.replace(" }", "}");
-        // Ensure proper spacing around ->
-        result = result.replace("->", " -> ");
-        result = result.replace("  ->  ", " -> ");
-        result = result.replace(" ->  ", " -> ");
+
+        result.trim().to_string()
+    }
+
+    fn normalize_operators(&self, line: &str) -> String {
+        let mut result = line.to_string();
+        let operators = [
+            "+", "-", "*", "/", "%", "=", "==", "!=", "<", ">", "<=", ">=",
+        ];
+
+        for op in operators {
+            let with_spaces = format!(" {} ", op);
+            let without_spaces = format!("{}{}", op, op);
+            result = result.replace(&without_spaces, &with_spaces);
+
+            let pattern = regex::Regex::new(&format!(r"(\w)({})", regex::escape(op))).unwrap();
+            result = pattern
+                .replace_all(&result, &format!("$1{}", with_spaces))
+                .to_string();
+
+            let pattern = regex::Regex::new(&format!(r"({})(\w)", regex::escape(op),)).unwrap();
+            result = pattern
+                .replace_all(&result, &format!("{} $1$3", with_spaces))
+                .to_string();
+        }
 
         result
     }
 
-    /// Get indentation string
+    fn normalize_params(&self, s: &str) -> String {
+        let re = regex::Regex::new(r"\(([^)]*)\)").unwrap();
+
+        re.replace_all(s, |caps: &regex::Captures| {
+            let inner = caps.get(1).map_or("", |m| m.as_str());
+            let normalized = self.normalize_param_inner(inner);
+            format!("({})", normalized)
+        })
+        .to_string()
+    }
+
+    fn normalize_param_inner(&self, inner: &str) -> String {
+        let trimmed = inner.trim();
+        if trimmed.is_empty() {
+            return String::new();
+        }
+
+        let parts: Vec<&str> = trimmed.split(',').collect();
+        let normalized_parts: Vec<String> = parts
+            .iter()
+            .map(|part| {
+                let p = part.trim();
+                if p.is_empty() {
+                    String::new()
+                } else {
+                    let re_spaces = regex::Regex::new(r"\s+").unwrap();
+                    let normalized = re_spaces.replace_all(p, " ").to_string();
+                    if normalized.contains(':') && !normalized.contains(": ") {
+                        let normalized = normalized.replace(":", ": ");
+                        normalized.trim().to_string()
+                    } else {
+                        normalized.trim().to_string()
+                    }
+                }
+            })
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        normalized_parts.join(", ")
+    }
+
+    fn normalize_parens(&self, line: &str) -> String {
+        let mut result = String::new();
+        let mut in_parens = false;
+        let chars: Vec<char> = line.chars().collect();
+
+        for i in 0..chars.len() {
+            let c = chars[i];
+
+            match c {
+                '(' | '[' => {
+                    in_parens = true;
+                    result.push(c);
+                    if i + 1 < chars.len() && chars[i + 1] == ' ' {
+                        continue;
+                    }
+                }
+                ')' | ']' => {
+                    in_parens = false;
+                    if result.ends_with(' ') {
+                        result.pop();
+                    }
+                    result.push(c);
+                    if i + 1 < chars.len() && chars[i + 1] == ' ' {
+                        continue;
+                    }
+                }
+                ',' if in_parens => {
+                    result.push(',');
+                    if i + 1 < chars.len() && chars[i + 1] != ' ' {
+                        result.push(' ');
+                    }
+                }
+                ' ' if i > 0 && i < chars.len() - 1 => {
+                    let prev = chars[i - 1];
+                    let next = chars[i + 1];
+                    if prev == ' ' || next == ' ' {
+                        continue;
+                    }
+                    if prev == '('
+                        || prev == '['
+                        || prev == ','
+                        || next == ')'
+                        || next == ']'
+                        || next == ','
+                    {
+                        continue;
+                    }
+                    result.push(c);
+                }
+                _ => result.push(c),
+            }
+        }
+
+        result.replace("  ", " ")
+    }
+
     fn get_indent(&self, level: usize) -> String {
         if self.config.use_tabs {
             "\t".repeat(level)
@@ -159,24 +281,22 @@ impl Formatter {
         }
     }
 
-    /// Normalize whitespace in formatted code
     fn normalize_whitespace(&self, code: &str) -> String {
         let mut result = String::new();
-        let mut consecutive_blanks = 0;
+        let mut blank_line_pending = false;
 
         for line in code.lines() {
             let trimmed = line.trim_end();
 
             if trimmed.is_empty() {
-                consecutive_blanks += 1;
-                // Reduce multiple blank lines to exactly 2
-                if consecutive_blanks == 2 {
+                blank_line_pending = true;
+            } else {
+                if blank_line_pending && !result.is_empty() {
                     result.push('\n');
                 }
-            } else {
                 result.push_str(trimmed);
                 result.push('\n');
-                consecutive_blanks = 0;
+                blank_line_pending = false;
             }
         }
 
