@@ -208,7 +208,7 @@ impl FuzzTester {
 
         let seed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_nanos() as u64;
 
         Self {
@@ -227,7 +227,7 @@ impl FuzzTester {
         let seed = config.seed.unwrap_or_else(|| {
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("System time should be after UNIX_EPOCH")
                 .as_nanos() as u64
         });
 
@@ -358,7 +358,7 @@ impl FuzzTester {
                 metadata: TestMetadata {
                     timestamp: SystemTime::now()
                         .duration_since(UNIX_EPOCH)
-                        .unwrap()
+                        .expect("System time should be after UNIX_EPOCH")
                         .as_secs(),
                     execution_time_ms: 0,
                     gas_used: 0,
@@ -379,7 +379,7 @@ impl FuzzTester {
                 metadata: TestMetadata {
                     timestamp: SystemTime::now()
                         .duration_since(UNIX_EPOCH)
-                        .unwrap()
+                        .expect("System time should be after UNIX_EPOCH")
                         .as_secs(),
                     execution_time_ms: 0,
                     gas_used: 0,
@@ -410,7 +410,7 @@ impl FuzzTester {
         let metadata = TestMetadata {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("System time should be after UNIX_EPOCH")
                 .as_secs(),
             execution_time_ms: start_time.elapsed().unwrap_or_default().as_millis() as u64,
             gas_used: 0,
@@ -776,7 +776,7 @@ impl FuzzTester {
 
         let seed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_nanos() as u64;
         self.rng = StdRng::seed_from_u64(seed);
     }

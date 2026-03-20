@@ -117,49 +117,49 @@ impl SecurityScanner {
     fn initialize_patterns(&mut self) {
         // Integer overflow patterns
         let overflow_patterns = vec![
-            Regex::new(r"\+\s*\d+").unwrap(),
-            Regex::new(r"\*\s*\d+").unwrap(),
+            Regex::new(r"\+\s*\d+").expect(r"Regex pattern is valid"),
+            Regex::new(r"\*\s*\d+").expect(r"Regex pattern is valid"),
         ];
         self.vuln_patterns
             .insert(VulnerabilityType::IntegerOverflow, overflow_patterns);
 
         // Integer underflow patterns
-        let underflow_patterns = vec![Regex::new(r"-\s*\d+").unwrap()];
+        let underflow_patterns = vec![Regex::new(r"-\s*\d+").expect(r"Regex pattern is valid")];
         self.vuln_patterns
             .insert(VulnerabilityType::IntegerUnderflow, underflow_patterns);
 
         // Reentrancy patterns
         let reentrancy_patterns = vec![
-            Regex::new(r"call\(").unwrap(),
-            Regex::new(r"delegatecall\(").unwrap(),
-            Regex::new(r"callcode\(").unwrap(),
+            Regex::new(r"call\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"delegatecall\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"callcode\(").expect(r"Regex pattern is valid"),
         ];
         self.vuln_patterns
             .insert(VulnerabilityType::Reentrancy, reentrancy_patterns);
 
         // Unchecked call return patterns
         let unchecked_patterns = vec![
-            Regex::new(r"\.call\(").unwrap(),
-            Regex::new(r"\.send\(").unwrap(),
-            Regex::new(r"\.transfer\(").unwrap(),
+            Regex::new(r"\.call\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"\.send\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"\.transfer\(").expect(r"Regex pattern is valid"),
         ];
         self.vuln_patterns
             .insert(VulnerabilityType::UncheckedCallReturn, unchecked_patterns);
 
         // Timestamp dependence patterns
         let timestamp_patterns = vec![
-            Regex::new(r"block\.timestamp").unwrap(),
-            Regex::new(r"now").unwrap(),
-            Regex::new(r"block\.number").unwrap(),
+            Regex::new(r"block\.timestamp").expect(r"Regex pattern is valid"),
+            Regex::new(r"now").expect(r"Regex pattern is valid"),
+            Regex::new(r"block\.number").expect(r"Regex pattern is valid"),
         ];
         self.vuln_patterns
             .insert(VulnerabilityType::TimestampDependence, timestamp_patterns);
 
         // Unprotected external call patterns
         let external_call_patterns = vec![
-            Regex::new(r"call\(").unwrap(),
-            Regex::new(r"delegatecall\(").unwrap(),
-            Regex::new(r"staticcall\(").unwrap(),
+            Regex::new(r"call\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"delegatecall\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"staticcall\(").expect(r"Regex pattern is valid"),
         ];
         self.vuln_patterns.insert(
             VulnerabilityType::UnprotectedExternalCall,
@@ -168,17 +168,17 @@ impl SecurityScanner {
 
         // Unbounded loop patterns
         let unbounded_patterns = vec![
-            Regex::new(r"for\s*\(").unwrap(),
-            Regex::new(r"while\s*\(").unwrap(),
+            Regex::new(r"for\s*\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"while\s*\(").expect(r"Regex pattern is valid"),
         ];
         self.vuln_patterns
             .insert(VulnerabilityType::UnboundedLoop, unbounded_patterns);
 
         // Array access patterns
         let array_patterns = vec![
-            Regex::new(r"\[\s*\]").unwrap(),
-            Regex::new(r"\.push\(").unwrap(),
-            Regex::new(r"\.pop\(").unwrap(),
+            Regex::new(r"\[\s*\]").expect(r"Regex pattern is valid"),
+            Regex::new(r"\.push\(").expect(r"Regex pattern is valid"),
+            Regex::new(r"\.pop\(").expect(r"Regex pattern is valid"),
         ];
         self.vuln_patterns
             .insert(VulnerabilityType::UncheckedArrayAccess, array_patterns);

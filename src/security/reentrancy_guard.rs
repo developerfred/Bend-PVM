@@ -85,7 +85,7 @@ impl ReentrancyGuard {
 
         let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_secs();
 
         // Check call stack depth
@@ -200,7 +200,7 @@ impl ReentrancyGuard {
     ) -> Result<(), SecurityError> {
         let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_secs();
 
         let guard_state = GuardState::Locked {
@@ -250,7 +250,7 @@ impl ReentrancyGuard {
     pub fn is_function_locked(&self, function: &str) -> bool {
         let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_secs();
 
         if let Some(guard_state) = self.locked_functions.get(function) {
@@ -300,7 +300,7 @@ impl ReentrancyGuard {
         // Check for time-based reentrancy
         let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_secs();
 
         let mut time_deltas = Vec::new();
