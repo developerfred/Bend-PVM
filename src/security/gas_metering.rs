@@ -252,7 +252,7 @@ impl GasMeter {
     pub fn record_gas_usage(&mut self, function: &str, gas_used: u64) {
         let current_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_secs();
 
         self.gas_history.push_back(GasEntry {

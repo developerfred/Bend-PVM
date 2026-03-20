@@ -665,3 +665,108 @@ impl Debugger {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_debugger_error_display() {
+        assert_eq!(
+            DebuggerError::Generic("test".to_string()).to_string(),
+            "Debugger error: test"
+        );
+        assert_eq!(
+            DebuggerError::Breakpoint("line 10".to_string()).to_string(),
+            "Breakpoint error: line 10"
+        );
+        assert_eq!(
+            DebuggerError::Environment("env error".to_string()).to_string(),
+            "Environment error: env error"
+        );
+    }
+
+    #[test]
+    fn test_debugger_event_variants() {
+        assert!(matches!(DebuggerEvent::Started, DebuggerEvent::Started));
+        assert!(matches!(DebuggerEvent::Stepped, DebuggerEvent::Stepped));
+        assert!(matches!(DebuggerEvent::Continued, DebuggerEvent::Continued));
+        assert!(matches!(DebuggerEvent::Finished, DebuggerEvent::Finished));
+        let event = DebuggerEvent::Crashed("test".to_string());
+        assert!(matches!(event, DebuggerEvent::Crashed(msg) if msg == "test"));
+    }
+
+    #[test]
+    fn test_debugger_command_variants() {
+        use DebuggerCommand::*;
+
+        assert!(matches!(Continue, Continue));
+        assert!(matches!(Step, Step));
+        assert!(matches!(StepLine, StepLine));
+        assert!(matches!(StepIn, StepIn));
+        assert!(matches!(StepOut, StepOut));
+        assert!(matches!(Print, Print));
+        assert!(matches!(Exit, Exit));
+
+        if let SetBreakpoint(bp) = SetBreakpoint(Breakpoint::line(10)) {
+            assert!(matches!(bp, Breakpoint::Line(10)));
+        }
+
+        if let Evaluate(expr) = Evaluate("x + y".to_string()) {
+            assert_eq!(expr, "x + y");
+        }
+    }
+
+    #[test]
+    fn test_debug_info_creation() {
+        let debug_info = DebugInfo {
+            source_path: PathBuf::from("test.bend"),
+            source_code: "fn main() {}".to_string(),
+            line_to_instruction: HashMap::new(),
+            instruction_to_line: HashMap::new(),
+            locals: HashMap::new(),
+            functions: HashMap::new(),
+        };
+
+        assert_eq!(debug_info.source_path, PathBuf::from("test.bend"));
+        assert_eq!(debug_info.source_code, "fn main() {}");
+    }
+
+    #[test]
+    fn test_variable_location() {
+        let stack_loc = VariableLocation::Stack(-8);
+        assert!(matches!(stack_loc, VariableLocation::Stack(-8)));
+
+        let reg_loc = VariableLocation::Register(0);
+        assert!(matches!(reg_loc, VariableLocation::Register(0)));
+    }
+
+    #[test]
+    fn test_function_range() {
+        let range = FunctionRange {
+            name: "main".to_string(),
+            start: 0,
+            end: 100,
+            start_line: 1,
+            end_line: 10,
+        };
+
+        assert_eq!(range.name, "main");
+        assert_eq!(range.start, 0);
+        assert_eq!(range.end, 100);
+        assert_eq!(range.start_line, 1);
+        assert_eq!(range.end_line, 10);
+    }
+
+    #[test]
+    fn test_breakpoint_command() {
+        let bp = Breakpoint::line(42);
+        let cmd = DebuggerCommand::SetBreakpoint(bp);
+
+        if let DebuggerCommand::SetBreakpoint(Breakpoint::Line(line)) = cmd {
+            assert_eq!(line, 42);
+        } else {
+            panic!("Expected SetBreakpoint with Line variant");
+        }
+    }
+}

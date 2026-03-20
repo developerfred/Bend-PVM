@@ -48,7 +48,7 @@ impl InputValidator {
         // Common string validation rules
         self.add_rule(ValidationRule {
             name: "safe_string".to_string(),
-            pattern: Some(Regex::new(r"^[a-zA-Z0-9_.-]+$").unwrap()),
+            pattern: Some(Regex::new(r"^[a-zA-Z0-9_.-]+$").expect(r"Regex pattern is valid")),
             max_length: Some(256),
             allowed_chars: None,
             required: false,
@@ -57,7 +57,10 @@ impl InputValidator {
         // Email validation
         self.add_rule(ValidationRule {
             name: "email".to_string(),
-            pattern: Some(Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap()),
+            pattern: Some(
+                Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+                    .expect(r"Regex pattern is valid"),
+            ),
             max_length: Some(254),
             allowed_chars: None,
             required: false,

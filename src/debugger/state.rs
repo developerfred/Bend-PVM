@@ -99,3 +99,93 @@ impl DebuggerState {
         self.local_variables.clear();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_execution_state_variants() {
+        assert!(matches!(ExecutionState::Running, ExecutionState::Running));
+        assert!(matches!(ExecutionState::Paused, ExecutionState::Paused));
+        assert!(matches!(ExecutionState::Stopped, ExecutionState::Stopped));
+    }
+
+    #[test]
+    fn test_debugger_state_new() {
+        let state = DebuggerState::new();
+        assert_eq!(state.execution_state, ExecutionState::Stopped);
+        assert_eq!(state.pc, 0);
+        assert!(state.call_stack.is_empty());
+        assert!(state.registers.is_empty());
+        assert!(state.memory.is_empty());
+        assert!(state.local_variables.is_empty());
+    }
+
+    #[test]
+    fn test_register_operations() {
+        let mut state = DebuggerState::new();
+        state.set_register("rax", 42);
+        assert_eq!(state.get_register("rax"), Some(42));
+
+        state.set_register("rax", 100);
+        assert_eq!(state.get_register("rax"), Some(100));
+
+        assert_eq!(state.get_register("unknown"), None);
+    }
+
+    #[test]
+    fn test_memory_operations() {
+        let mut state = DebuggerState::new();
+        state.set_memory(0x1000, 0xAB);
+        assert_eq!(state.get_memory(0x1000), Some(0xAB));
+
+        state.set_memory(0x1000, 0xCD);
+        assert_eq!(state.get_memory(0x1000), Some(0xCD));
+
+        assert_eq!(state.get_memory(0xFFFF), None);
+    }
+
+    #[test]
+    fn test_local_variables() {
+        let mut state = DebuggerState::new();
+        state.set_local_variable("x", 10);
+        state.set_local_variable("y", 20);
+
+        assert_eq!(state.get_local_variable("x"), Some(10));
+        assert_eq!(state.get_local_variable("y"), Some(20));
+        assert_eq!(state.get_local_variable("z"), None);
+    }
+
+    #[test]
+    fn test_call_stack() {
+        let mut state = DebuggerState::new();
+        state.call_stack.push("main".to_string());
+        state.call_stack.push("foo".to_string());
+
+        assert_eq!(state.current_function(), Some("foo"));
+
+        state.call_stack.pop();
+        assert_eq!(state.current_function(), Some("main"));
+
+        state.call_stack.pop();
+        assert_eq!(state.current_function(), None);
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut state = DebuggerState::new();
+        state.pc = 100;
+        state.set_register("rax", 42);
+        state.set_memory(0x1000, 0xAB);
+        state.call_stack.push("test".to_string());
+
+        state.reset();
+
+        assert_eq!(state.pc, 0);
+        assert_eq!(state.execution_state, ExecutionState::Stopped);
+        assert!(state.registers.is_empty());
+        assert!(state.memory.is_empty());
+        assert!(state.call_stack.is_empty());
+    }
+}
