@@ -140,13 +140,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             no_abi,
         } => {
             // Handle auto flag behavior
-            let optimize = if cli.auto { !no_optimize } else { !no_optimize };
+            let optimize = !no_optimize;
 
-            let type_check = if cli.auto {
-                !no_type_check
-            } else {
-                !no_type_check
-            };
+            let type_check = !no_type_check;
 
             // Determine output path if not specified
             let output = output.or_else(|| {
@@ -183,11 +179,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             no_type_check,
         } => {
             // Handle auto flag behavior
-            let type_check = if cli.auto {
-                !no_type_check
-            } else {
-                !no_type_check
-            };
+            let type_check = !no_type_check;
 
             // Set compiler options for checking
             let options = CompilerOptions {

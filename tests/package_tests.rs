@@ -187,7 +187,7 @@ mod package_tests {
 
     #[test]
     fn test_version_from_str() {
-        let version = Version::from_str("1.2.3");
+        let version = Version::parse("1.2.3");
         assert!(version.is_ok());
         let v = version.unwrap();
         assert_eq!(v.major, 1);
